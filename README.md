@@ -17,3 +17,4 @@ Monitoring-time: the time BestGC monitor the user's application to measure its h
 pid: Process ID. PID of the running user’s application.
 run-best-gc: a boolean value(true / false) to define if the user need to his/her application to run automatically by BestGC with the suggested GC;default is true. 
 
+As an output, BestGC reports if a user's application is CPU-intensive or not. Also it reports the average CPU core engaged by the user's application also the maximum heap used by the application.
