@@ -1,6 +1,6 @@
 BestGC offers the best GC solution (among four well known GCs: G1, Parallel, Shenandoah, and ZGC) based on the CPU and heap usage of your software and based on user's preferences regarding Throughput and Pause Time.
 
-- You may run BestGc using a command like bellow:
+You can run BestGc using a command like bellow:
    java -jar BestGC.jar --user-app="path to the user’s application’s jar file + its input options" --monitoring-time=40
 --wp="weight for pause time
 
