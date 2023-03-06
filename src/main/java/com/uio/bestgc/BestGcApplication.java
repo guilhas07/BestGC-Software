@@ -79,8 +79,8 @@ public class BestGcApplication implements ApplicationRunner {
             }*/
             Double wt =0D;
             Double wp= 0D;
-            if (optionNames.contains("wt")) {
-                 wt = Double.parseDouble(args.getOptionValues("wt").get(0).toString());
+            if (optionNames.contains("we")) {
+                 wt = Double.parseDouble(args.getOptionValues("we").get(0).toString());
                 if (wt > 1D) {
                     logError("Weight for Throughput should be between 0 and 1");
                     return;
