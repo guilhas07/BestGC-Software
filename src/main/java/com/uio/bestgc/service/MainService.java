@@ -15,6 +15,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.OptionalDouble;
 import java.util.concurrent.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 
@@ -40,21 +42,25 @@ public class MainService extends Profiler {
 
     public void run(UserInputs inputs) {
         userInputs = inputs;
-        //run the user's app if there is a path to the jar file
+        // run the user's app if there is a path to the jar file
         if (userInputs.getUserAppToRun() != null) {
             try {
                 String java = System.getProperty("java.home") + "/bin/java";
                 String jar = java + " -jar " + userInputs.getUserAppToRun();
+                // System.out.println("JARRRRR: " + jar);
                 userappProcess = Runtime.getRuntime().exec(jar);
                 printList.add("********* " + "PID of the process is: " + userappProcess.pid() + "*********");
-                //System.out.println("********* " + "PID of the process is: " + userappProcess.pid() + "*********");
-                //System.out.println("*************" + userInputs.getUserAppToRun() + "*************");
-                //wait for 5 second until the app is run
+                // System.out.println("********* " + "PID of the process is: " +
+                // userappProcess.pid() + "*********");
+                // System.out.println("*************" + userInputs.getUserAppToRun() +
+                // "*************");
+                // wait for 5 second until the app is run
                 Thread.sleep(5000);
-                userInputs.setApplicationName(userInputs.getUserAppToRun().contains(" ") ?
-                        userInputs.getUserAppToRun().split(" ")[0] : userInputs.getUserAppToRun());
-//                userInputs.setPId(String.valueOf(prs.pid()));
-//                statistics.setPid(String.valueOf(prs.pid()));
+                userInputs.setApplicationName(
+                        userInputs.getUserAppToRun().contains(" ") ? userInputs.getUserAppToRun().split(" ")[0]
+                                : userInputs.getUserAppToRun());
+                // userInputs.setPId(String.valueOf(prs.pid()));
+                // statistics.setPid(String.valueOf(prs.pid()));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (IOException e) {
@@ -62,11 +68,12 @@ public class MainService extends Profiler {
                 e.printStackTrace();
             }
         }
-        //Find the application pid when user didn't pass the pid
+        // Find the application pid when user didn't pass the pid
         if (userInputs.getPId() == null || userInputs.getPId() == "") {
             try {
                 String process;
-                // getRuntime: Returns the runtime object associated with the current Java application.
+                // getRuntime: Returns the runtime object associated with the current Java
+                // application.
                 // exec: Executes the specified string command in a separate process.
                 Process p = Runtime.getRuntime().exec("ps -axo pid,command");
                 BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
@@ -76,9 +83,9 @@ public class MainService extends Profiler {
                         statistics.setPid(s[0] != "" ? s[0] : s[1]);
                         userInputs.setPId(s[0] != "" ? s[0] : s[1]);
                     }
-                    //TODO use the logger class if there is no process with the given name
+                    // TODO use the logger class if there is no process with the given name
                 }
-                //System.out.println("The Process Id is : " + statistics.getPid());
+                // System.out.println("The Process Id is : " + statistics.getPid());
                 input.close();
                 p.destroy();
                 if (p.isAlive())
@@ -91,44 +98,57 @@ public class MainService extends Profiler {
     }
 
     public void top(int time) {
-        //To capture heap usage using jstat
+        // To capture heap usage using jstat
         List<String> heapUsageList = new ArrayList<>();
-        //Just for testing renaissance and dacapo benchmark I have bellow line
+        // Just for testing renaissance and dacapo benchmark I have bellow line
         engagedCoresService.setUserAppName(userInputs.getUserAppToRun());
-        //To capture rss usage per second for the user app
-        //List<String> rssList = new ArrayList<>();
-        /*engagedCoresService.setUserAppName(userInputs.getApplicationName() != null ?
-                userInputs.getApplicationName() : "");*/
+        // To capture rss usage per second for the user app
+        // List<String> rssList = new ArrayList<>();
+        /*
+         * engagedCoresService.setUserAppName(userInputs.getApplicationName() != null ?
+         * userInputs.getApplicationName() : "");
+         */
         CountDownLatch latch = new CountDownLatch(1);
-        //a list to hold data from atop command, each batch run is seperated by "new"
+        // a list to hold data from atop command, each batch run is seperated by "new"
         List<Process> topOutputProcessList = new ArrayList<>();
         Integer timer = (time > 0 ? time : Integer.parseInt(samplingTime)); // time to collect atop in second
         ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
         executor.scheduleAtFixedRate(new Runnable() {
             public void run() {
-                //top -l 2 -pid 66336 -stats cpu >> it is better to set -l to 3.in the man top it is said that son't trust to the first output using -l
+                // top -l 2 -pid 66336 -stats cpu >> it is better to set -l to 3.in the man top
+                // it is said that son't trust to the first output using -l
                 try {
                     if (userInputs.getUserOS().toLowerCase().contains("mac")) {
-                        Process p = Runtime.getRuntime().exec("top -l " + Integer.parseInt(topCaptureNumber) + " -pid " + statistics.getPid() + " -stats cpu");
+                        Process p = Runtime.getRuntime().exec("top -l " + Integer.parseInt(topCaptureNumber) + " -pid "
+                                + statistics.getPid() + " -stats cpu");
                         topOutputProcessList.add(p);
                     } else if (userInputs.getUserOS().toLowerCase().contains("linux")) {
-//                        String[] cmd = {"top -bn 1 -p ", statistics.getPid(), " awk 'NR>6 {printf($9\"\\n\");'}" };
-                        //ProcessBuilder pb = new ProcessBuilder("top", "-bn", "1", "-p", statistics.getPid());
-                        //Process p = pb.start();
+                        // String[] cmd = {"top -bn 1 -p ", statistics.getPid(), " awk 'NR>6
+                        // {printf($9\"\\n\");'}" };
+                        // ProcessBuilder pb = new ProcessBuilder("top", "-bn", "1", "-p",
+                        // statistics.getPid());
+                        // Process p = pb.start();
                         Process p = Runtime.getRuntime().exec("top -bn 1 -p " + statistics.getPid());
                         topOutputProcessList.add(p);
                         engagedCoresService.captureCpu();
                         ProcessBuilder processBuilder = new ProcessBuilder();
 
-                        //processBuilder.command("bash", "-c", "ps -p " + statistics.getPid() + " -o pid,rss | awk 'END {print $2}'");
-                        /*because we run the app with g1 all the $2(Current survivor space 1 capacity),$5(Current eden space capacity),
-                         $7(Current old space capacity) and $11(Compressed class committed size) are not null-- result in KB
+                        // processBuilder.command("bash", "-c", "ps -p " + statistics.getPid() + " -o
+                        // pid,rss | awk 'END {print $2}'");
+                        /*
+                         * because we run the app with g1 all the $2(Current survivor space 1
+                         * capacity),$5(Current eden space capacity),
+                         * $7(Current old space capacity) and $11(Compressed class committed size) are
+                         * not null-- result in KB
                          */
-                        processBuilder.command("bash", "-c", "jstat -gc " + statistics.getPid() + " | awk 'END {print $0}' | awk '{sum = $4 + $6 + $8 + $10+ $12; printf \"%.2f\", sum }' ");
-//                        processBuilder.command("bash", "-c", "jstat -gc " + statistics.getPid() + " | awk 'END {print $0}' | awk '{sum = $2 + $5 + $7 + $11; printf \"%.2f\", sum }' ");
+                        processBuilder.command("bash", "-c", "jstat -gc " + statistics.getPid()
+                                + " | awk 'END {print $0}' | awk '{sum = $4 + $6 + $8 + $10+ $12; printf \"%.2f\", sum }' ");
+                        // processBuilder.command("bash", "-c", "jstat -gc " + statistics.getPid() + " |
+                        // awk 'END {print $0}' | awk '{sum = $2 + $5 + $7 + $11; printf \"%.2f\", sum
+                        // }' ");
                         Process getJstat = processBuilder.start();
-                        BufferedReader jstatHeapValue = new BufferedReader(new
-                                InputStreamReader(getJstat.getInputStream()));
+                        BufferedReader jstatHeapValue = new BufferedReader(
+                                new InputStreamReader(getJstat.getInputStream()));
                         heapUsageList.add(jstatHeapValue.readLine());
                     }
 
@@ -159,7 +179,8 @@ public class MainService extends Profiler {
         if (done) {
             parseTopOutputs(topOutputProcessList);
             calculateHeapUsage(heapUsageList);
-            //Only kills the user app when the user give the jar file address to run and test the app
+            // Only kills the user app when the user give the jar file address to run and
+            // test the app
             if (userInputs.getUserAppToRun() != null) {
                 try {
                     Runtime.getRuntime().exec("kill " + userInputs.getPId());
@@ -189,7 +210,7 @@ public class MainService extends Profiler {
                     while ((process = input.readLine()) != null) {
                         if (process.contains("%CPU")) {
                             counter++;
-                            if (counter == Integer.parseInt(topCaptureNumber)) {//to get the last top result
+                            if (counter == Integer.parseInt(topCaptureNumber)) {// to get the last top result
                                 Double usage = Double.parseDouble(input.readLine());
                                 if (usage > 0)
                                     statistics.getCpuUsage().add(usage);
@@ -210,8 +231,8 @@ public class MainService extends Profiler {
                         if (prs.contains("%CPU")) {
                             String res = input.readLine();
                             if (res != null) {
-                                Double usage = Double.parseDouble(Arrays.asList(res.split(" ")).
-                                        stream().filter(a -> !a.equals("")).collect(Collectors.toList()).get(8));
+                                Double usage = Double.parseDouble(Arrays.asList(res.split(" ")).stream()
+                                        .filter(a -> !a.equals("")).collect(Collectors.toList()).get(8));
                                 if (usage > 0)
                                     statistics.getCpuUsage().add(usage);
                             }
@@ -233,28 +254,31 @@ public class MainService extends Profiler {
         double avgCpu = statistics.getCpuUsage().stream().mapToDouble(d -> d).average().orElse(0.0);
         printList.add("*************************" + userInputs.getApplicationName() + "*************************");
         printList.addAll(statistics.getCpuUsage().stream().map(a -> a.toString()).collect(Collectors.toList()));
-//        System.out.println(statistics.getCpuUsage());
+        // System.out.println(statistics.getCpuUsage());
         double avgCpuPerCore = 0;
         if (userInputs.getUserOS().toLowerCase().contains("mac"))
             avgCpuPerCore = avgCpu / Runtime.getRuntime().availableProcessors();
         else if (userInputs.getUserOS().toLowerCase().contains("linux")) {
-            long engCores = engagedCoresService.finalAvgEngagedCores() == 0 ? 1 : engagedCoresService.finalAvgEngagedCores();
+            long engCores = engagedCoresService.finalAvgEngagedCores() == 0 ? 1
+                    : engagedCoresService.finalAvgEngagedCores();
             avgCpuPerCore = avgCpu / engCores;
             statistics.setAvgCpuPerCore(avgCpuPerCore);
             printList.add("AVG CPU:" + avgCpu + " AVG CPU usage per core:" + avgCpuPerCore);
-            //System.out.println("AVG CPU used by the user's application:" + avgCpu + " AVG CPU usage per core:" + avgCpuPerCore);
+            // System.out.println("AVG CPU used by the user's application:" + avgCpu + " AVG
+            // CPU usage per core:" + avgCpuPerCore);
 
             if (avgCpuPerCore > Double.parseDouble(cpuIntensiveThreshold)) {
                 statistics.setIsCpuIntensive(true);
             } else {
                 statistics.setIsCpuIntensive(false);
             }
-            if(engagedCoresService.finalAvgEngagedCores() < 1){
+            if (engagedCoresService.finalAvgEngagedCores() < 1) {
                 statistics.setIsCpuIntensive(false);
             }
         }
 
-//        profileLogs("avg-cpu", userInputs.getApplicationName() != null ? userInputs.getApplicationName() : "", printList);
+        // profileLogs("avg-cpu", userInputs.getApplicationName() != null ?
+        // userInputs.getApplicationName() : "", printList);
         profileLogs("avg-cpu", userInputs.getUserAppToRun().split(" ")[1], printList);
         return avgCpuPerCore;
     }
