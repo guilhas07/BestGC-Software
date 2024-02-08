@@ -78,10 +78,20 @@ public class MainService extends Profiler {
                 Process p = Runtime.getRuntime().exec("ps -axo pid,command");
                 BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
                 while ((process = input.readLine()) != null) {
+                    // The second (and last) this pattern matches will be the correct processId.
+                    // This works because the benchmark application process will be created after, appearing last.
                     if (process.contains(userInputs.getApplicationName())) {
-                        String[] s = process.split(" ");
-                        statistics.setPid(s[0] != "" ? s[0] : s[1]);
-                        userInputs.setPId(s[0] != "" ? s[0] : s[1]);
+
+                        Pattern pattern = Pattern.compile("\\d+");
+                        Matcher matcher = pattern.matcher(process);
+                        if (!matcher.find()) {
+                            System.out.println("Error: process id was not found");
+                            return;
+                        }
+                        String processId = matcher.group();
+                        statistics.setPid(processId);
+                        userInputs.setPId(processId);
+                        System.out.println("Found process id: " + process + "Pid: " + userInputs.getPId());
                     }
                     // TODO use the logger class if there is no process with the given name
                 }
