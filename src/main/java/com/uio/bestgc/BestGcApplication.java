@@ -111,7 +111,7 @@ public class BestGcApplication implements ApplicationRunner {
 
             }
             if (wt == 0D && wp == 0D){
-                logError("Wp or Wt is not defiend.");
+                logError("Wp or Wt is not defined.");
                 return;
             }
             if (optionNames.contains("memory"))
