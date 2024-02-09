@@ -289,7 +289,12 @@ public class MainService extends Profiler {
 
         // profileLogs("avg-cpu", userInputs.getApplicationName() != null ?
         // userInputs.getApplicationName() : "", printList);
-        profileLogs("avg-cpu", userInputs.getUserAppToRun().split(" ")[1], printList);
+
+        // FIX: this only handles apps with the followign structure: ./app benchmark name options...
+        //                                                           ./app
+        // Meaning ./app options... will generate a log folder with the first option.
+        String[] s = userInputs.getUserAppToRun().split(" ");
+        profileLogs("avg-cpu", s.length == 1 ? s[0] : s[1], printList);
         return avgCpuPerCore;
     }
 
