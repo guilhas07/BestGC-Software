@@ -30,8 +30,9 @@ public final class CpuIntensiveResultsConstants {
         matrix_8192.put("ps_pause", 1.688);
         matrix_8192.put("shenandoah_throughput", 1.093);
         matrix_8192.put("shenandoah_pause", 0.148);
-        matrix_8192.put("zgc_throughput", 1.098);
-        matrix_8192.put("zgc_pause", 0.044);
+        //z_throughput
+        matrix_8192.put("z_throughput", 1.098);
+        matrix_8192.put("z_pause", 0.044);
     }
 
     static {
@@ -41,8 +42,8 @@ public final class CpuIntensiveResultsConstants {
         matrix_4096.put("ps_pause", 1.167);
         matrix_4096.put("shenandoah_throughput", 1.114);
         matrix_4096.put("shenandoah_pause", 0.091);
-        matrix_4096.put("zgc_throughput", 1.139);
-        matrix_4096.put("zgc_pause", 0.073);
+        matrix_4096.put("z_throughput", 1.139);
+        matrix_4096.put("z_pause", 0.073);
     }
 
     static {
@@ -52,8 +53,8 @@ public final class CpuIntensiveResultsConstants {
         matrix_2048.put("ps_pause", 1.644);
         matrix_2048.put("shenandoah_throughput", 1.103);
         matrix_2048.put("shenandoah_pause", 0.309);
-        matrix_2048.put("zgc_throughput", 1.171);
-        matrix_2048.put("zgc_pause", 0.102);
+        matrix_2048.put("z_throughput", 1.171);
+        matrix_2048.put("z_pause", 0.102);
     }
 
     static {
@@ -63,8 +64,8 @@ public final class CpuIntensiveResultsConstants {
         matrix_1024.put("ps_pause", 1.499);
         matrix_1024.put("shenandoah_throughput", 1.153);
         matrix_1024.put("shenandoah_pause", 0.270);
-        matrix_1024.put("zgc_throughput", 1.189);
-        matrix_1024.put("zgc_pause", 0.102);
+        matrix_1024.put("z_throughput", 1.189);
+        matrix_1024.put("z_pause", 0.102);
     }
 
     static {
@@ -74,8 +75,8 @@ public final class CpuIntensiveResultsConstants {
         matrix_512.put("ps_pause", 1.299);
         matrix_512.put("shenandoah_throughput", 1.222);
         matrix_512.put("shenandoah_pause", 0.244);
-        matrix_512.put("zgc_throughput", 1.334);
-        matrix_512.put("zgc_pause", 0.068);
+        matrix_512.put("z_throughput", 1.334);
+        matrix_512.put("z_pause", 0.068);
     }
 
     static {
@@ -85,8 +86,8 @@ public final class CpuIntensiveResultsConstants {
         matrix_256.put("ps_pause", 1.091);
         matrix_256.put("shenandoah_throughput", 1.429);
         matrix_256.put("shenandoah_pause", 0.242);
-        matrix_256.put("zgc_throughput", 1.841);
-        matrix_256.put("zgc_pause", 0.092);
+        matrix_256.put("z_throughput", 1.841);
+        matrix_256.put("z_pause", 0.092);
     }
 
     public Map<String, Double> getMatrix(String heap){
