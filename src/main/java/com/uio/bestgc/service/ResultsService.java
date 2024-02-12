@@ -2,27 +2,22 @@ package com.uio.bestgc.service;
 
 import com.uio.bestgc.model.Statistics;
 import com.uio.bestgc.model.UserInputs;
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.util.*;
 
 @Service
 public class ResultsService extends Profiler {
-    List<GcValue> finalOrderedResults = new ArrayList<>();
     private String heap = "";
     private UserInputs userInputs = new UserInputs();
     private Statistics statistics = new Statistics();
-    private Map<String, Double> results = new HashMap<>();
+    private List<GcValue> results = new ArrayList<>();
     // private List<String> gcs = Arrays.asList("G1", "PS", "Shenandoah", "ZGC");
     private List<String> gcs = Arrays.asList("G1", "PS", "Shenandoah", "Z");
     private String executableJar = "";
 
+    // TODO: simplify matrix
     @SuppressWarnings("unchecked")
     public void fetchMatrix(UserInputs ui, Statistics st) {
         userInputs = ui;
@@ -55,10 +50,8 @@ public class ResultsService extends Profiler {
             }
         }
         calculateResults(matrix, ui.getWeightThroughput(), ui.getWeightPause());
-        createOrderedResults();
         executableJar = createExecutionCommand();
         printResults();
-        System.out.println("AQUIII");
     }
 
     public String findHeap(Double heap) {
@@ -89,27 +82,10 @@ public class ResultsService extends Profiler {
             Double x = (matrix.get(t.toLowerCase()) * weightThroughput)
                     + (matrix.get(p.toLowerCase()) * weightPause);
 
-            results.put(gc, x);
+            results.add(new GcValue(gc, x));
         }
-    }
-
-    public void createOrderedResults() {
-        Map<String, Double> r = results;
-        results.forEach((key, value) -> System.out.println("Resultado: Key: " + key + "Value: " + value));
-
-        String gc = r.keySet().toArray()[0].toString();
-        Double min = r.get(gc);
-        for (Map.Entry e : r.entrySet()) {
-            if ((Double) e.getValue() < min) {
-                min = (Double) e.getValue();
-                gc = e.getKey().toString();
-            }
-        }
-        finalOrderedResults.add(new GcValue(gc, min));
-        if (r.entrySet().size() > 1) {
-            r.remove(gc);
-            createOrderedResults();
-        }
+        results.sort(Comparator.comparingDouble(GcValue::value).reversed());
+        results.forEach( e -> System.out.println("Por order: " + e.gc + " " + e.value));
     }
 
     public void printResults() {
@@ -131,37 +107,40 @@ public class ResultsService extends Profiler {
         String str5 = "Available memory is: " + userInputs.getUserAvailableMemory();
         System.out.println(str5);
         printList.add(str5);
-        String str6 = "Recommended GC is: " + finalOrderedResults.get(0).getGc();
+        String str6 = "Recommended GC is: " + results.get(0).gc;
         System.out.println(str6);
         printList.add(str6);
         // profileLogs("avg-cpu", userInputs.getUserAppToRun().split(" ")[1],
         // printList);
-        finalOrderedResults.clear();
+        results.clear();
     }
 
     public String createExecutionCommand() {
         StringBuilder executableCommand = new StringBuilder();
         String java = System.getProperty("java.home") + "/bin/java";
-        System.out.println("Giro: " + finalOrderedResults.get(0));
-        System.out.println("Giro 2: " + finalOrderedResults.get(0).getGc());
+        System.out.println("Giro: " + results.get(0));
+        System.out.println("Giro 2: " + results.get(0).gc);
         // String gc = finalOrderedResults.get(0).getGc().equals("ZGC") ? "ZGC"
         // : finalOrderedResults.get(0).getGc() + "GC";
-        String gc = finalOrderedResults.get(0).getGc() + "GC";
+        String gc = results.get(0).gc + "GC";
         String appToRun = "";
-        if (statistics.getPid() != null) {
-            try {
-                ProcessBuilder processBuilder = new ProcessBuilder();
-                processBuilder.command("bash", "-c",
-                        "jcmd | grep \":" + statistics.getPid() + "\" | awk '{print $2}' ");
-                Process getApp = null;
 
-                getApp = processBuilder.start();
+        // TODO: dont know what this does
+        // if (statistics.getPid() != null) {
+        //     try {
+        //         ProcessBuilder processBuilder = new ProcessBuilder();
+        //         processBuilder.command("bash", "-c",
+        //                 "jcmd | grep \":" + statistics.getPid() + "\" | awk '{print $2}' ");
+        //         Process getApp = null;
+        //
+        //         getApp = processBuilder.start();
+        //
+        //         appToRun = new BufferedReader(new InputStreamReader(getApp.getInputStream())).readLine();
+        //     } catch (IOException e) {
+        //         e.printStackTrace();
+        //     }
+        // }
 
-                appToRun = new BufferedReader(new InputStreamReader(getApp.getInputStream())).readLine();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
         String app = userInputs.getUserAppToRun() != "" ? userInputs.getUserAppToRun() : appToRun;
         Double maxHeap = (statistics.getMaxHeapUsage() * 1.2) / 1024;
 
@@ -175,15 +154,6 @@ public class ResultsService extends Profiler {
         return executableJar;
     }
 
-    @Getter
-    @Setter
-    class GcValue {
-        String gc;
-        Double value;
-
-        public GcValue(String gc, Double value) {
-            this.gc = gc;
-            this.value = value;
-        }
+    record GcValue(String gc, Double value) {
     }
 }
