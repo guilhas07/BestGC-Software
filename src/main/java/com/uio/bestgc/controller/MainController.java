@@ -49,6 +49,7 @@ public class MainController {
             try {
                 mainService.getUserappProcess().destroy();
                 System.out.println("Running app with the best GC...");
+                System.out.println("Executing: " + executableJar);
                 Process userAppWithBestGc = Runtime.getRuntime().exec(executableJar);
             } catch (IOException e) {
                 e.printStackTrace();
