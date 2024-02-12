@@ -14,7 +14,7 @@ public class ResultsService extends Profiler {
     private Statistics statistics = new Statistics();
     private List<GcValue> results = new ArrayList<>();
     // private List<String> gcs = Arrays.asList("G1", "PS", "Shenandoah", "ZGC");
-    private List<String> gcs = Arrays.asList("G1", "PS", "Shenandoah", "Z");
+    private List<String> gcs = Arrays.asList("G1", "Parallel", "Shenandoah", "Z");
     private String executableJar = "";
 
     // TODO: simplify matrix
