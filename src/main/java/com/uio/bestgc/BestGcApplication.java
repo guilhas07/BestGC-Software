@@ -26,6 +26,7 @@ public class BestGcApplication implements ApplicationRunner {
 
     public static void main(String[] args) {
         ConfigurableApplicationContext run = SpringApplication.run(BestGcApplication.class, args);
+        run.close();
         //MainController bean = run.getBean(MainController.class);
     }
 
