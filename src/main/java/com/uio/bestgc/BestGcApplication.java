@@ -1,9 +1,8 @@
 package com.uio.bestgc;
 
-import com.uio.bestgc.controller.MainController;
-import com.uio.bestgc.model.PerformanceMetric;
-import com.uio.bestgc.model.UserInputs;
-import com.uio.bestgc.service.OldResultsService;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,8 +12,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import com.uio.bestgc.controller.MainController;
+import com.uio.bestgc.model.UserInputs;
 
 @SpringBootApplication
 public class BestGcApplication implements ApplicationRunner {

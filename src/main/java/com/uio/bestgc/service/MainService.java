@@ -1,12 +1,5 @@
 package com.uio.bestgc.service;
 
-import com.uio.bestgc.model.Statistics;
-import com.uio.bestgc.model.UserInputs;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -14,15 +7,26 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.OptionalDouble;
-import java.util.concurrent.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.DoubleStream;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import com.uio.bestgc.model.Statistics;
+import com.uio.bestgc.model.UserInputs;
 
 @Service
 public class MainService extends Profiler {
-    private static final Logger logger = LoggerFactory.getLogger(OldResultsService.class);
+    private static final Logger logger = LoggerFactory.getLogger(EngagedCoresService.class); // TODO: see this logger
     private final EngagedCoresService engagedCoresService;
     @Value("${cpu.threshold}")
     private String cpuIntensiveThreshold;
