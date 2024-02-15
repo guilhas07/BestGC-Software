@@ -118,8 +118,6 @@ public class ResultsService extends Profiler {
     public String createExecutionCommand() {
         StringBuilder executableCommand = new StringBuilder();
         String java = System.getProperty("java.home") + "/bin/java";
-        System.out.println("Giro: " + results.get(0));
-        System.out.println("Giro 2: " + results.get(0).gc);
         // String gc = finalOrderedResults.get(0).getGc().equals("ZGC") ? "ZGC"
         // : finalOrderedResults.get(0).getGc() + "GC";
         String gc = results.get(0).gc + "GC";
