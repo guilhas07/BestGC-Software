@@ -6,8 +6,8 @@ target/*
 !**/src/test/**/target/
 !target/*-SNAPSHOT.jar
 
-./benchmark_app/.venv
-./benchmark_app/__pycache__
+benchmark_app/.venv
+benchmark_app/__pycache__
 
 ### STS ###
 .apt_generated
