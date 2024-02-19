@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 from __future__ import annotations
 
-import numpy
 import argparse
 import glob
 import json
@@ -11,11 +10,19 @@ import subprocess
 import time
 from dataclasses import asdict, dataclass
 
+import numpy
+
 BENCHMARK_PATH = "./benchmark_apps"
 BENCHMARK_STATS_PATH = "./benchmark_stats"
 BENCHMARK_LOG_PATH = "./benchmark_logs"
 CPU_COUNT = os.cpu_count()
 CPU_THRESHOLD = 60
+
+
+Stats = tuple[float, int]
+"""(average_cpu_percentage, throughput)
+average_cpu_percentage: float -> average benchmark cpu percentage
+throughput: int -> Time in nanoseconds. Equivalent to program execution time"""
 
 
 @dataclass
@@ -25,6 +32,7 @@ class GarbageCollectorResult:
     total_pause_time: int
     avg_pause_time: float
     p90_avg_pause_time: float
+    avg_throughput: float
 
     def save_to_json(self):
         with open(
@@ -47,6 +55,7 @@ class BenchmarkResult:
     total_pause_time_per_category: dict[str, int]
     avg_pause_time_per_category: dict[str, float]
     p90_pause_time: float
+    throughput: int
 
     @staticmethod
     def load_from_json(file_path: str) -> BenchmarkResult:
@@ -55,13 +64,17 @@ class BenchmarkResult:
 
     @staticmethod
     def build_benchmark_result(
-        gc: str, benchmark_group: str, benchmark_name: str, cpu_intensive: bool
+        gc: str,
+        benchmark_group: str,
+        benchmark_name: str,
+        cpu_intensive: bool,
+        throughput: int,
     ) -> BenchmarkResult:
         log_file = get_benchmark_log_path(gc, benchmark_group, benchmark_name)
         number_of_pauses = 0
 
         total_pause_time = 0
-        avg_pause_time = 0
+        avg_pause_time = 0.0
         pauses_per_category = {}
         total_pause_time_per_category = {}
         avg_pause_time_per_category = {}
@@ -104,6 +117,7 @@ class BenchmarkResult:
             total_pause_time_per_category,
             avg_pause_time_per_category,
             p90_pause_time,
+            throughput,
         )
 
     def save_to_json(self):
@@ -118,13 +132,12 @@ class BenchmarkResult:
 
 def run_benchmark(
     gc: str, benchmark: str, benchmark_group: str, iterations: int
-) -> float:
+) -> Stats:
     process = subprocess.Popen(
         [
             "java",
             f"-XX:+Use{gc}GC",
             f"-Xlog:gc*,safepoint:file={get_benchmark_log_path(gc, benchmark_group, benchmark)}::filecount=0",
-            # f"-Xlog:gc*,safepoint:file={BENCHMARK_LOG_PATH}/{benchmark_group}_{benchmark}_{gc}.log::filecount=0",
             "-jar",
             f"{BENCHMARK_PATH}/renaissance-gpl-0.15.0.jar",
             benchmark,
@@ -133,8 +146,11 @@ def run_benchmark(
             "--no-forced-gc",
         ]
     )
+    time_start = time.time_ns()
     pid = process.pid
     cpu_stats = []
+
+    # TODO: see better polling method than sleeping 1 seconds for throughput
     while process.poll() is None:
         # subprocess.run with capture_output doesn't seem to capture the whole output when
         # using top with -1 flag
@@ -148,7 +164,8 @@ def run_benchmark(
         print(f"{cpu_stat=}")
         cpu_stats.append(cpu_stat)
         time.sleep(1)
-    return round(numpy.mean(cpu_stats), 1)
+
+    return (round(float(numpy.mean(cpu_stats)), 1), time.time_ns() - time_start)
 
 
 def run_renaissance(gc: str, iterations: int) -> list[BenchmarkResult]:
@@ -165,9 +182,13 @@ def run_renaissance(gc: str, iterations: int) -> list[BenchmarkResult]:
     # for benchmark in renaissance_benchmarks:
     for benchmark in renaissance_benchmarks[0:2]:
         print(f"Running benchmark {benchmark} with GC: {gc} and {iterations=}")
-        average_cpu = run_benchmark(gc, benchmark, benchmark_group, iterations)
+        (average_cpu, throughput) = run_benchmark(
+            gc, benchmark, benchmark_group, iterations
+        )
+        print(f"{average_cpu=} and {throughput=}")
+        print(f"{type(average_cpu)=} and {type(throughput)=}")
         result = BenchmarkResult.build_benchmark_result(
-            gc, benchmark_group, benchmark, average_cpu >= CPU_THRESHOLD
+            gc, benchmark_group, benchmark, average_cpu >= CPU_THRESHOLD, throughput
         )
         result.save_to_json()
         benchmark_results.append(result)
@@ -210,7 +231,7 @@ def main(argv=None) -> int:
         "--iterations",
         dest="iterations",
         default=10,
-        help="Number of iterations to run benchmarks",
+        help="Number of iterations to run benchmarks. Increase this number to achieve more reliable metrics.",
     )
     parser.print_help()
 
@@ -228,11 +249,13 @@ def main(argv=None) -> int:
         total_gc_pauses = 0
         total_gc_pause_time = 0
         p90_gc_pause_time = []
+        gc_throughput = []
 
         for result in benchmark_results:
             total_gc_pauses += result.number_of_pauses
             total_gc_pause_time += result.total_pause_time
             p90_gc_pause_time.append(result.p90_pause_time)
+            gc_throughput.append(result.throughput)
 
         gc_result = GarbageCollectorResult(
             gc,
@@ -240,6 +263,7 @@ def main(argv=None) -> int:
             total_gc_pause_time,
             round(total_gc_pause_time / total_gc_pauses, 2),
             round(numpy.mean(p90_gc_pause_time), 2),
+            round(numpy.mean(gc_throughput), 2),
         )
         print(f"{gc_result}")
         gc_result.save_to_json()
@@ -247,7 +271,4 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
-    # TODO: only for 90th percentile pause_times ?
-    # TODO: add throughtput calculations too
-
     exit(main())
