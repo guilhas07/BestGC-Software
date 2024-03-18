@@ -50,7 +50,7 @@ public class ResultsService extends Profiler {
             }
         }
         calculateResults(matrix, ui.getWeightThroughput(), ui.getWeightPause());
-        executableJar = createExecutionCommand();
+        // executableJar = createExecutionCommand();
         printResults();
     }
 
@@ -85,7 +85,7 @@ public class ResultsService extends Profiler {
             results.add(new GcValue(gc, x));
         }
         results.sort(Comparator.comparingDouble(GcValue::value).reversed());
-        results.forEach( e -> System.out.println("Por order: " + e.gc + " " + e.value));
+        results.forEach(e -> System.out.println("Por order: " + e.gc + " " + e.value));
     }
 
     public void printResults() {
@@ -115,41 +115,74 @@ public class ResultsService extends Profiler {
         results.clear();
     }
 
-    public String createExecutionCommand() {
+    // public String createExecutionCommand(String gc) {
+    // StringBuilder executableCommand = new StringBuilder();
+    // String java = System.getProperty("java.home") + "/bin/java";
+    // // String gc = finalOrderedResults.get(0).getGc().equals("ZGC") ? "ZGC"
+    // // : finalOrderedResults.get(0).getGc() + "GC";
+    // String appToRun = "";
+    //
+    // // TODO: dont know what this does
+    // // if (statistics.getPid() != null) {
+    // // try {
+    // // ProcessBuilder processBuilder = new ProcessBuilder();
+    // // processBuilder.command("bash", "-c",
+    // // "jcmd | grep \":" + statistics.getPid() + "\" | awk '{print $2}' ");
+    // // Process getApp = null;
+    // //
+    // // getApp = processBuilder.start();
+    // //
+    // // appToRun = new BufferedReader(new
+    // // InputStreamReader(getApp.getInputStream())).readLine();
+    // // } catch (IOException e) {
+    // // e.printStackTrace();
+    // // }
+    // // }
+    //
+    // String app = userInputs.getUserAppToRun() != "" ?
+    // userInputs.getUserAppToRun() : appToRun;
+    // Double maxHeap = (statistics.getMaxHeapUsage() * 1.2) / 1024;
+    //
+    // executableCommand.append(java).append("
+    // ").append("-Xmx").append(findHeap(maxHeap))
+    // .append("m ").append("-XX:+Use").append(gc).append("GC").append(" -jar
+    // ").append(app);
+    //
+    // return executableCommand.toString();
+    // }
+
+    public String getExecutableJar(String gc, String maxHeap, String app) {
         StringBuilder executableCommand = new StringBuilder();
         String java = System.getProperty("java.home") + "/bin/java";
         // String gc = finalOrderedResults.get(0).getGc().equals("ZGC") ? "ZGC"
         // : finalOrderedResults.get(0).getGc() + "GC";
-        String gc = results.get(0).gc + "GC";
-        String appToRun = "";
+        // String appToRun = "";
 
         // TODO: dont know what this does
         // if (statistics.getPid() != null) {
-        //     try {
-        //         ProcessBuilder processBuilder = new ProcessBuilder();
-        //         processBuilder.command("bash", "-c",
-        //                 "jcmd | grep \":" + statistics.getPid() + "\" | awk '{print $2}' ");
-        //         Process getApp = null;
+        // try {
+        // ProcessBuilder processBuilder = new ProcessBuilder();
+        // processBuilder.command("bash", "-c",
+        // "jcmd | grep \":" + statistics.getPid() + "\" | awk '{print $2}' ");
+        // Process getApp = null;
         //
-        //         getApp = processBuilder.start();
+        // getApp = processBuilder.start();
         //
-        //         appToRun = new BufferedReader(new InputStreamReader(getApp.getInputStream())).readLine();
-        //     } catch (IOException e) {
-        //         e.printStackTrace();
-        //     }
+        // appToRun = new BufferedReader(new
+        // InputStreamReader(getApp.getInputStream())).readLine();
+        // } catch (IOException e) {
+        // e.printStackTrace();
+        // }
         // }
 
-        String app = userInputs.getUserAppToRun() != "" ? userInputs.getUserAppToRun() : appToRun;
-        Double maxHeap = (statistics.getMaxHeapUsage() * 1.2) / 1024;
+        // String app = userInputs.getUserAppToRun() != "" ?
+        // userInputs.getUserAppToRun() : appToRun;
+        // Double maxHeap = (statistics.getMaxHeapUsage() * 1.2) / 1024;
 
-        executableCommand.append(java).append(" ").append("-Xmx").append(findHeap(maxHeap))
-                .append("m ").append("-XX:+Use").append(gc).append(" -jar ").append(app);
+        executableCommand.append(java).append(" ").append("-Xmx").append(maxHeap)
+                .append("m ").append("-XX:+Use").append(gc).append("GC").append(" -jar ").append(app);
 
         return executableCommand.toString();
-    }
-
-    public String getExecutableJar() {
-        return executableJar;
     }
 
     record GcValue(String gc, Double value) {

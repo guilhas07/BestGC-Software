@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.uio.bestgc.model.Statistics;
 import com.uio.bestgc.model.UserInputs;
 import com.uio.bestgc.service.MainService;
+import com.uio.bestgc.service.MatrixService;
 import com.uio.bestgc.service.ResultsService;
 
 @RestController
@@ -20,9 +21,12 @@ public class MainController {
     private final MainService mainService;
     private final ResultsService resultsService;
     private final ApplicationContext context;
+    private final MatrixService matrixService;
 
-    public MainController(MainService mainService, ResultsService resultsService1, ApplicationContext context) {
+    public MainController(MainService mainService, MatrixService matrixService, ResultsService resultsService1,
+            ApplicationContext context) {
         this.mainService = mainService;
+        this.matrixService = matrixService;
         this.resultsService = resultsService1;
         this.context = context;
     }
@@ -33,8 +37,18 @@ public class MainController {
         Statistics statistics = mainService.findStatistics(inputs.getSamplingTime());
         System.out.println(
                 "The average CPU usage per core by the user's application is: " + statistics.getAvgCpuPerCore() + "%");
-        resultsService.fetchMatrix(inputs, statistics);
-        String executableJar = resultsService.getExecutableJar();
+        // resultsService.fetchMatrix(inputs, statistics);
+        Double maxHeapUsage = statistics.getMaxHeapUsage() * 1.2 / 1024;
+        System.out.println("Heap suggested by BestGC: " + maxHeapUsage);
+        String heap = resultsService.findHeap(maxHeapUsage);
+
+        String gc = this.matrixService.getBestGC(statistics.getIsCpuIntensive(), heap, inputs.getWeightThroughput(),
+                inputs.getWeightPause());
+
+        // heap = findHeap(Double.parseDouble(ui.getUserAvailableMemory()));
+
+        String executableJar = resultsService.getExecutableJar(gc, heap, inputs.getUserAppToRun());
+        System.out.println(executableJar);
         if (inputs.getRunAppWithBestGC() == null || inputs.getRunAppWithBestGC()) {
             try {
                 mainService.getUserappProcess().destroy();

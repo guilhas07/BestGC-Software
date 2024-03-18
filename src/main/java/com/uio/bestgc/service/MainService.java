@@ -83,7 +83,8 @@ public class MainService extends Profiler {
                 BufferedReader input = new BufferedReader(new InputStreamReader(p.getInputStream()));
                 while ((process = input.readLine()) != null) {
                     // The second (and last) this pattern matches will be the correct processId.
-                    // This works because the benchmark application process will be created after, appearing last.
+                    // This works because the benchmark application process will be created after,
+                    // appearing last.
                     if (process.contains(userInputs.getApplicationName())) {
 
                         Pattern pattern = Pattern.compile("\\d+");
@@ -294,8 +295,9 @@ public class MainService extends Profiler {
         // profileLogs("avg-cpu", userInputs.getApplicationName() != null ?
         // userInputs.getApplicationName() : "", printList);
 
-        // FIX: this only handles apps with the followign structure: ./app benchmark name options...
-        //                                                           ./app
+        // FIX: this only handles apps with the followign structure: ./app benchmark
+        // name options...
+        // ./app
         // Meaning ./app options... will generate a log folder with the first option.
         String[] s = userInputs.getUserAppToRun().split(" ");
         profileLogs("avg-cpu", s.length == 1 ? s[0] : s[1], printList);
