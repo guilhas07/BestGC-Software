@@ -1,135 +1,84 @@
 package com.uio.bestgc;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import static java.lang.StringTemplate.STR;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.nio.charset.StandardCharsets;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnNotWebApplication;
+import org.springframework.stereotype.Component;
 
-import com.uio.bestgc.controller.MainController;
-import com.uio.bestgc.model.UserInputs;
+import com.uio.bestgc.model.ProfileAppRequest;
+import com.uio.bestgc.service.MainService;
 
 @SpringBootApplication
-public class BestGcApplication implements ApplicationRunner {
+public class BestGcApplication {
 
-    private static final Logger logger = LoggerFactory.getLogger(BestGcApplication.class);
-    private UserInputs userInputs;
     @Autowired
-    private MainController mainController;
+    private MainService mainService;
 
-    public static void main(String[] args) {
-        ConfigurableApplicationContext run = SpringApplication.run(BestGcApplication.class, args);
-        run.close();
-        //MainController bean = run.getBean(MainController.class);
+    @Value("${monitoring-time}")
+    private int monitoringTime;
+
+    public static void main(String... args) {
+        SpringApplication.run(BestGcApplication.class, args);
     }
 
-    public static void logError(String logging) {
-        logger.error("\u001B[31m" + logging + "\u001B[0m");
-    }
-//    public static void endRun(){
-//        SpringApplication.exit(context, new ExitCodeGenerator() {
-//            @Override
-//            public int getExitCode() {
-//                return 0;
-//            }
-//        });
-//    }
+    @Component
+    @ConditionalOnNotWebApplication
+    class ConsoleRunner implements CommandLineRunner {
 
+        @Override
+        public void run(String... args) {
+            // Implement your console runner logic here
+            // java -jar BestGC.jar pathToJar --wp="weight for pause time"
+            // its input options" --monitoring-time=40
+            // --wp="weight for pause time
 
-    @Override
-    public void run(ApplicationArguments args) throws Exception {
-
-        userInputs = new UserInputs();
-        userInputs.setUserOS(System.getProperty("os.name"));
-        System.out.println(args.getOptionNames());
-        if (args.getOptionNames().size() > 0) {
-            List<String> optionNames = args.getOptionNames().stream().map(a -> a.toLowerCase()).collect(Collectors.toList());
-            if (optionNames.contains("name"))
-                userInputs.setApplicationName(args.getOptionValues("name").get(0));
-            if (optionNames.contains("user-app"))
-                userInputs.setUserAppToRun(args.getOptionValues("user-app").get(0));
-            else if (!optionNames.contains("user-app"))
-                logError("Path to the user's app should be defined.");
-            /*if (optionNames.contains("metric")) {
-                switch (args.getOptionValues("metric").get(0).toLowerCase()) {
-                    case "t":
-                        userInputs.setMetric(PerformanceMetric.THROUGHPUT);
-                        break;
-                    case "m":
-                        userInputs.setMetric(PerformanceMetric.MEMORYUSAGE);
-                        break;
-                    case "p":
-                        userInputs.setMetric(PerformanceMetric.PAUSETIME);
-                        break;
-                    case "a":
-                        userInputs.setMetric(PerformanceMetric.ALL);
-                        break;
-                    default:
-                        userInputs.setMetric(PerformanceMetric.ALL);
-                }
-            }
-            else {
-                userInputs.setMetric(PerformanceMetric.ALL);
-            }*/
-            Double wt =0D;
-            Double wp= 0D;
-            if (optionNames.contains("we")) {
-                 wt = Double.parseDouble(args.getOptionValues("we").get(0).toString());
-                if (wt > 1D) {
-                    logError("Weight for Throughput should be between 0 and 1");
-                    return;
-                } else {
-                    userInputs.setWeightThroughput(wt);
-                    Float f= 1- Double.valueOf(wt).floatValue();
-
-                    userInputs.setWeightPause(Double.parseDouble(f.toString()));
-                }
-            }
-            if (optionNames.contains("wp")) {
-                wp = Double.parseDouble(args.getOptionValues("wp").get(0).toString());
-                if(wt >0D){
-                    if(wt+wp!= 1D){
-                        logError("Weight for Pause Time is calculated based on Wt, it is:" + wp);
-                        return;
-                    }
-                } else if (wt == 0D){
-                    if (wp > 1D) {
-                        logError( "Weight for Pause Time should be between 0 and 1");
-                        return;
-                    } else {
-                        userInputs.setWeightPause(wp);
-                        Float f= 1- Double.valueOf(wp).floatValue();
-                        userInputs.setWeightThroughput(Double.parseDouble(f.toString()));
-                    }
-                }
-
-            }
-            if (wt == 0D && wp == 0D){
-                logError("Wp or Wt is not defined.");
+            if (args.length < 2) {
+                System.out.println("Please specify the application jar and the --wp or --wt");
                 return;
             }
-            if (optionNames.contains("memory"))
-                userInputs.setUserAvailableMemory(args.getOptionValues("memory").get(0));
 
-            if (optionNames.contains("monitoring-time")) {
-                userInputs.setSamplingTime(Integer.parseInt(args.getOptionValues("monitoring-time").get(0)));
-            } else
-                userInputs.setSamplingTime(0);
-            if (optionNames.contains("pid")) {
-                userInputs.setPId(args.getOptionValues("pid").get(0));
+            String pathToJar = args[0];
+            float throughputWeight = -1;
+            float pauseTimeWeight = -1;
+            String jarArgs = "";
+
+            for (int i = 1; i < args.length; i++) {
+                switch (args[i]) {
+                    // case String str when str.contains("--wt"):
+                    case String s when s.contains("--wt=") -> {
+                        throughputWeight = Float.valueOf(s.substring(5));
+                        pauseTimeWeight = 1 - throughputWeight;
+                    }
+                    case String s when s.contains("--wp=") -> {
+                        pauseTimeWeight = Float.valueOf(s.substring(5));
+                        throughputWeight = 1 - pauseTimeWeight;
+                    }
+                    case String s when s.contains("--monitoringTime=") ->
+                        monitoringTime = Integer.valueOf(s.substring("monitoringTime".length()));
+                    case String s when s.contains("--args=") ->
+                        jarArgs = s.substring("--args=".length());
+                    default -> System.out.println(STR."Option \{args[i]} not recognized");
+                }
             }
-            if (optionNames.contains("run-best-gc")) {
-                userInputs.setRunAppWithBestGC(Boolean.valueOf(args.getOptionValues("run-best-gc").get(0)));
+
+            if (pauseTimeWeight < 0 || throughputWeight < 0 || throughputWeight + pauseTimeWeight != 1) {
+                System.out.println("The sum of throughputWeight and pauseTimeWeight should be equal to 1");
+                return;
             }
 
-            mainController.main(userInputs);
-        } else logger.error("Please pass the software's name and desired performance metric to the application.");
-
+            var response = mainService.profileApp(
+                    new ProfileAppRequest(throughputWeight, pauseTimeWeight, monitoringTime, jarArgs, null),
+                    pathToJar);
+            System.out.println(response);
+        }
     }
 }

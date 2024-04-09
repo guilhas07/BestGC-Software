@@ -1,85 +1,79 @@
 package com.uio.bestgc.controller;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
-import org.springframework.boot.ExitCodeGenerator;
-import org.springframework.boot.SpringApplication;
-import org.springframework.context.ApplicationContext;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.uio.bestgc.model.Statistics;
-import com.uio.bestgc.model.UserInputs;
+import com.uio.bestgc.model.ProfileAppRequest;
+import com.uio.bestgc.model.ProfileAppResponse;
 import com.uio.bestgc.service.MainService;
-import com.uio.bestgc.service.MatrixService;
-import com.uio.bestgc.service.ResultsService;
 
 @RestController
 public class MainController {
-    private final MainService mainService;
-    private final ResultsService resultsService;
-    private final ApplicationContext context;
-    private final MatrixService matrixService;
 
-    public MainController(MainService mainService, MatrixService matrixService, ResultsService resultsService1,
-            ApplicationContext context) {
-        this.mainService = mainService;
-        this.matrixService = matrixService;
-        this.resultsService = resultsService1;
-        this.context = context;
+    private static final String PROFILE_ENDPOINT = "/profile_app";
+
+    @Autowired
+    MainService mainService;
+
+    public MainController() {
     }
 
-    public void main(UserInputs inputs) {
-        mainService.run(inputs);
-        // run the command
-        Statistics statistics = mainService.findStatistics(inputs.getSamplingTime());
-        System.out.println(
-                "The average CPU usage per core by the user's application is: " + statistics.getAvgCpuPerCore() + "%");
-        // resultsService.fetchMatrix(inputs, statistics);
-        Double maxHeapUsage = statistics.getMaxHeapUsage() * 1.2 / 1024;
-        System.out.println("Heap suggested by BestGC: " + maxHeapUsage);
-        String heap = resultsService.findHeap(maxHeapUsage);
+    @GetMapping("/")
+    public String home() {
+        return STR."""
+                <html>
+                <head>
+                    <title>Parameter Form</title>
+                </head>
+                <body>
+                    <h2>Enter Parameters</h2>
+                    <form action="\{PROFILE_ENDPOINT}" method="POST" enctype="multipart/form-data">
+                        <label for="throughput_weight">Throughput Weight:</label>
+                        <input type="number" id="throughput_weight" min="0" max="1" step="0.01" name="throughputWeight" required><br><br>
 
-        String gc = this.matrixService.getBestGC(statistics.getIsCpuIntensive(), heap, inputs.getWeightThroughput(),
-                inputs.getWeightPause());
+                        <label for="pause_time_weight">Pause Time Weight:</label>
+                        <input type="number" id="pause_time_weight" min="0" max="1" step="0.01" name="pauseTimeWeight" required><br><br>
 
-        // heap = findHeap(Double.parseDouble(ui.getUserAvailableMemory()));
+                        <label for="file">App jar:</label>
+                        <input type="file" id="file" name="file" accept=".jar" required><br><br>
 
-        String executableJar = resultsService.getExecutableJar(gc, heap, inputs.getUserAppToRun());
-        System.out.println(executableJar);
-        if (inputs.getRunAppWithBestGC() == null || inputs.getRunAppWithBestGC()) {
-            try {
-                mainService.getUserappProcess().destroy();
-                System.out.println("Running app with the best GC...");
-                System.out.println("Executing: " + executableJar);
+                        <label for="app_args">App arguments:</label>
+                        <input type="text" id="app_args" name="args"><br><br>
 
-                Process userAppWithBestGc = Runtime.getRuntime().exec(executableJar.split(" "));
+                        <label for="monitoring_time">Monitoring Time:</label>
+                        <input type="text" id="monitoring_time" name="monitoringTime" required><br><br>
 
-                InputStream is = userAppWithBestGc.getInputStream();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+                        <input type="submit" value="Submit">
+                    </form>
+                </body>
+                </html>
+                """;
+    }
 
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    System.out.println(line);
-                }
+    @PostMapping(value = PROFILE_ENDPOINT, consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    public ProfileAppResponse profileApplication(@ModelAttribute ProfileAppRequest profileRequest) {
+        System.out.println(profileRequest);
+        try {
+            var file = profileRequest.file();
+            var dest = Paths.get("jars").resolve(file.getOriginalFilename());
+            Files.copy(file.getInputStream(), dest, StandardCopyOption.REPLACE_EXISTING);
 
-                int exitCode = userAppWithBestGc.waitFor();
-                System.out.println("Process exited with code " + exitCode);
-            } catch (InterruptedException | IOException e) {
-                System.out.println("EXCEPTION");
-                e.printStackTrace();
-            }
-        } else {
-            System.out.println("The command to run user app with the best GC is: ");
-            System.out.println(executableJar);
-            SpringApplication.exit(context, new ExitCodeGenerator() {
-                @Override
-                public int getExitCode() {
-                    return 0;
-                }
-            });
+            return mainService.profileApp(profileRequest, dest.toString());
+
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
+        return null;
     }
+
 }

@@ -51,6 +51,7 @@ do
     do
         for ITER in 10
         do
+        # echo "$BENCH $SIZE $ITER"
           runSet $BENCH $SIZE $ITER
         done
     done
