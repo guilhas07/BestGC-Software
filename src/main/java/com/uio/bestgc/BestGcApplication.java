@@ -1,11 +1,5 @@
 package com.uio.bestgc;
 
-import static java.lang.StringTemplate.STR;
-
-import java.nio.charset.StandardCharsets;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -66,7 +60,7 @@ public class BestGcApplication {
                         monitoringTime = Integer.valueOf(s.substring("monitoringTime".length()));
                     case String s when s.contains("--args=") ->
                         jarArgs = s.substring("--args=".length());
-                    default -> System.out.println(STR."Option \{args[i]} not recognized");
+                    default -> System.out.println("Option " + args[i] + " not recognized");
                 }
             }
 

@@ -1,6 +1,8 @@
 package com.uio.bestgc.service;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FilenameFilter;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,14 +10,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import java.util.Arrays;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.uio.bestgc.model.ProfileAppRequest;
 import com.uio.bestgc.model.ProfileAppResponse;
-
-import ch.qos.logback.core.net.SyslogOutputStream;
 
 @Service
 public class MainService {
@@ -75,8 +77,7 @@ public class MainService {
                     Pattern pattern = Pattern.compile("(\\d+.\\d+) us.*(\\d+.\\d+) wa");
                     Matcher matcher = pattern.matcher(lines.get(2));
                     if (!matcher.find()) {
-                        System.out.println(
-                                STR."Error: couldn't match cpu us time and IO-wait time in \{lines.get(2)}");
+                        System.out.println("Error: couldn't match cpu us time and IO-wait time in " + lines.get(2));
                         break;
                     }
 
@@ -89,7 +90,8 @@ public class MainService {
                         break;
                     }
 
-                    float cpuAvg = (float) Math.round(Float.valueOf(lines.get(1).trim().split("\\s+")[8]) * 100) / 100 / CPU_CORES;
+                    float cpuAvg = (float) Math.round(Float.valueOf(lines.get(1).trim().split("\\s+")[8]) * 100) / 100
+                            / CPU_CORES;
 
                     is_cpu_intensive += us > wa ? 1 : -1;
                     cpuTime.add(us);
@@ -126,18 +128,30 @@ public class MainService {
 
     }
 
+    public String[] getJars() {
+        File jarsFolder = new File("jars");
+        FilenameFilter filter = (dir, name) -> name.endsWith(".jar");
+        File[] files = jarsFolder.listFiles(filter);
+        List<String> fileNames = new ArrayList<>();
+
+        Arrays.stream(files).forEach(f -> fileNames.add(f.getName()));
+
+        return fileNames.toArray(String[]::new);
+    }
+
     private String[] getExecJarCommand(String app, String args) {
-        System.out.println(STR."java -jar \{app} \{args}");
-        return STR."java -jar \{app} \{args}".split(" ");
+        System.out.println("java -jar " + app + " " + args);
+        return ("java -jar " + app + " " + args).split(" ");
     }
 
     private String[] getTopCommand(long pid) {
-        return STR."top -bn 1 -p \{pid}".split(" ");
+        return ("top -bn 1 -p " + pid).split(" ");
     }
 
-    private String[] getHeapCommand(long pid) throws Exception{
+    private String[] getHeapCommand(long pid) throws Exception {
         // NOTE: Using /bin/bash -c to use pipes. \\n to prevent early expansion.
-        return new String[]{ "/bin/bash", "-c", STR."jstat -gc \{pid} | awk 'END {sum = $4 + $6 + $8 + $10 + $12; printf \"%.2f\\n\", sum}'"};
+        return new String[] { "/bin/bash", "-c",
+                "jstat -gc " + pid + " | awk 'END {sum = $4 + $6 + $8 + $10 + $12; printf \"%.2f\\n\", sum}'" };
     }
 
 }
