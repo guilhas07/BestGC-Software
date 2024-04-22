@@ -1,40 +1,74 @@
-<!DOCTYPE html>                                 
+<!doctype html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>                                         
-  <title>BestGC</title>
-  <link rel="stylesheet" type="text/css" href="css/styles.css">
-  <script src="scripts/script.js"></script>
-</head>
-<body>
-  <h2>Application Parameters</h2>
-  <!--<form id="form" action="/profile_app" method="post" enctype="multipart/form-data">-->
-    <form id="form" th:action="@{/profile_app}" th:method="post" th:object="${profile}" enctype="multipart/form-data">
+    <head>
+        <title>BestGC</title>
+        <link rel="stylesheet" type="text/css" href="css/styles.css" />
+        <script src="scripts/script.js"></script>
+    </head>
+    <body>
+        <h2>Application Parameters</h2>
+        <!--<form id="form" action="/profile_app" method="post" enctype="multipart/form-data">-->
+        <form
+            id="form"
+            th:action="@{/profile_app}"
+            th:method="post"
+            th:object="${profile}"
+            enctype="multipart/form-data"
+        >
+            <label>Throughput Weight:</label>
+            <input
+                type="number"
+                min="0"
+                max="1"
+                step="0.01"
+                th:field="*{throughputWeight}"
+                required
+            />
+            <br />
+            <br />
 
-    <label>Throughput Weight:</label> 
-    <input type="number" min="0" max="1" step="0.01" th:field="*{throughputWeight}" required/>
-    <br><br>
+            <label>Pause Time Weight:</label>
+            <input
+                type="number"
+                min="0"
+                max="1"
+                step="0.01"
+                th:field="*{pauseTimeWeight}"
+                required
+            />
+            <br />
+            <br />
 
-    <label>Pause Time Weight:</label> 
-    <input type="number" min="0" max="1" step="0.01"  th:field="*{pauseTimeWeight}" required/>
-    <br><br>
+            <label>App jar:</label>
+            <select th:field="*{jar}">
+                <option
+                    th:each="jar: ${jars}"
+                    th:name="${jar}"
+                    th:value="${jar}"
+                    th:text="${jar}"
+                />
+                <option value="Custom">Custom</option>
+            </select>
+            <input
+                type="file"
+                accept=".jar"
+                th:field="*{file}"
+                style="display: none"
+            />
+            <br />
+            <br />
 
-    <label>App jar:</label> 
-    <select th:field="*{jar}"> 
-        <option th:each="jar: ${jars}" th:name="${jar}" th:value="${jar}" th:text="${jar}"/>
-        <option value="Custom">Custom</option> 
-    </select>
-    <input type="file" accept=".jar" th:field="*{file}" style="display:none"/>
-    <br><br>
+            <label>App arguments:</label>
+            <input type="text" th:field="*{args}" />
+            <br />
+            <br />
 
-    <label>App arguments:</label> 
-    <input type="text" th:field="*{args}"/>
-    <br><br>
+            <label>Monitoring Time (seconds):</label>
+            <input type="text" th:field="*{monitoringTime}" required />
+            <br />
+            <br />
 
-    <label>Monitoring Time (seconds):</label> 
-    <input type="text" th:field="*{monitoringTime}" required/>
-    <br><br>
-
-    <input type="submit" value="Submit">
-  </form>
-</body>
+            <input type="submit" value="Submit" />
+        </form>
+    </body>
 </html>
