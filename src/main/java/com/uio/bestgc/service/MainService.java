@@ -25,8 +25,8 @@ public class MainService {
     @Autowired
     MatrixService matrixService;
 
-    @Value("${monitoring-time}")
-    private int monitoringTime;
+    // @Value("${monitoring-time}")
+    // private int monitoringTime;
 
     final private int profileInterval = 1;
 
@@ -42,6 +42,8 @@ public class MainService {
         Process appProcess = null;
         ProfileAppResponse response = null;
         try {
+            int monitoringTime = profileAppRequest.monitoringTime();
+
             appProcess = Runtime.getRuntime().exec(getExecJarCommand(appPath, profileAppRequest.args()));
             long pid = appProcess.pid();
             var heapCommand = getHeapCommand(pid);
@@ -116,6 +118,7 @@ public class MainService {
 
             response = new ProfileAppResponse(bestGC.gc(), bestGC.heapSize(), maxHeap, cpuUsage, ioTime,
                     cpuTime, is_cpu_intensive >= 0);
+            System.out.println(response);
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();

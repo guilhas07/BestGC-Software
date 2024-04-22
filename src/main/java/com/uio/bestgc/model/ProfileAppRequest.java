@@ -6,19 +6,19 @@ import org.springframework.web.multipart.MultipartFile;
 public record ProfileAppRequest(
         double throughputWeight,
         double pauseTimeWeight,
-        // String userAvailableMemory,
         int monitoringTime,
+        String jar,
         String args,
         MultipartFile file) {
+    // String userAvailableMemory,
 
+    // NOTE: compact constructor runs after canonical constructor
     public ProfileAppRequest {
-        // if (throughputWeight == null && pauseTimeWeight == null) {
-        // throw new IllegalArgumentException("Throughput Weight and Pause Weight can't
-        // both be null.");
-        // }
-        if (throughputWeight + pauseTimeWeight != 1) {
-            throw new IllegalArgumentException("Sum of Throughput Weight and Pause Weight should be equal to 1.");
+        if (pauseTimeWeight < 0 || throughputWeight < 0 || throughputWeight + pauseTimeWeight != 1) {
+            throw new IllegalArgumentException(
+                    "Throughput and Pause Weight sould be positive and their sum equal to 1.");
         }
+        if (monitoringTime <= 0)
+            throw new IllegalArgumentException("Monitoring Time must be a positive value");
     }
-
 }

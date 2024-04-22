@@ -1,16 +1,18 @@
 window.onload = function(){
     let form = document.getElementById("form");
-    let tw_input = form["throughput_weight"]
-    let pw_input = form["pause_time_weight"]
+    let tw_input = form["throughputWeight"]
+    let pw_input = form["pauseTimeWeight"]
     let jar = form["jar"]
     let file = form["file"]
 
     jar.addEventListener('change', function(){
         if (jar.value == "Custom"){
-            file.type = "file"     
+            file.style.display = "block";
+            file.required = true;
             return;
         }
-        file.type = "hidden"
+        file.required = false;
+        file.style.display = "none"
     })
 
     tw_input.addEventListener('input', function(){
