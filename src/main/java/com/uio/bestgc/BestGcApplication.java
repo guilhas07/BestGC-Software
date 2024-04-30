@@ -6,6 +6,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnNotWebApplication;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import com.uio.bestgc.model.ProfileAppRequest;
@@ -21,7 +22,12 @@ public class BestGcApplication {
     private int monitoringTime;
 
     public static void main(String... args) {
-        SpringApplication.run(BestGcApplication.class, args);
+        var env = SpringApplication.run(BestGcApplication.class, args).getEnvironment();
+        System.out.println("message from application.properties "
+                + env.getProperty("spring.thymeleaf.prefix"));
+
+        System.out.println("GIRO "
+                + env.getProperty("classpath"));
     }
 
     @Component
@@ -35,6 +41,8 @@ public class BestGcApplication {
             // its input options" --monitoring-time=40
             // --wp="weight for pause time
 
+            // System.out.printf("prefix: {}", env.get("spring.thymeleaf.prefix"));
+            // System.out.printf("monitor: {}", env.getProperty("monitoring-time"));
             if (args.length < 2) {
                 System.out.println("Please specify the application jar and the --wp or --wt");
                 return;
@@ -70,7 +78,7 @@ public class BestGcApplication {
             }
 
             var response = mainService.profileApp(
-                    new ProfileAppRequest(throughputWeight, pauseTimeWeight, monitoringTime, jarArgs, null),
+                    new ProfileAppRequest(throughputWeight, pauseTimeWeight, monitoringTime, pathToJar, jarArgs, null),
                     pathToJar);
             System.out.println(response);
         }

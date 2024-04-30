@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.InputStreamReader;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -18,6 +19,8 @@ import org.springframework.stereotype.Service;
 
 import com.uio.bestgc.model.ProfileAppRequest;
 import com.uio.bestgc.model.ProfileAppResponse;
+import com.uio.bestgc.model.RunAppRequest;
+import com.uio.bestgc.model.RunAppResponse;
 
 @Service
 public class MainService {
@@ -44,7 +47,7 @@ public class MainService {
         try {
             int monitoringTime = profileAppRequest.monitoringTime();
 
-            appProcess = Runtime.getRuntime().exec(getExecJarCommand(appPath, profileAppRequest.args()));
+            appProcess = Runtime.getRuntime().exec(getProfileJarCommand(appPath, profileAppRequest.args()));
             long pid = appProcess.pid();
             var heapCommand = getHeapCommand(pid);
             var topCommand = getTopCommand(pid);
@@ -131,6 +134,34 @@ public class MainService {
 
     }
 
+    public synchronized RunAppResponse runApp(RunAppRequest runAppRequest, String appPath) {
+
+        Process appProcess = null;
+        try {
+            appProcess = Runtime.getRuntime()
+                    .exec(getExecJarCommand(runAppRequest, appPath));
+
+            // TODO: some kind of status return
+            System.out.println("App process running with pid: " + appProcess.pid());
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            return null;
+        }
+        return new RunAppResponse();
+
+        // if (appProcess != null && appProcess.isAlive())
+        // appProcess.destroy();
+
+        // return response;
+
+    }
+
+    public String[] getAvailableGCs() {
+        // TODO: find / implement a way to get available GCs
+        return new String[] { "G1", "Parallel", "Z" };
+    }
+
     public String[] getJars() {
         File jarsFolder = new File("jars");
         FilenameFilter filter = (dir, name) -> name.endsWith(".jar");
@@ -142,9 +173,45 @@ public class MainService {
         return fileNames.toArray(String[]::new);
     }
 
-    private String[] getExecJarCommand(String app, String args) {
+    private String[] getProfileJarCommand(String app, String args) {
         System.out.println("java -jar " + app + " " + args);
         return ("java -jar " + app + " " + args).split(" ");
+    }
+
+    private String[] getExecJarCommand(RunAppRequest request, String appPath) {
+        // TODO: use string builder
+        String command = "java";
+        String gc = request.garbageCollector();
+        command += gc != null ? " -XX:+Use" + gc + "GC" : "";
+
+        // Heap size and custom policy
+        if (request.customHeapGCPolicy() != null) {
+            command += " " + request.customHeapGCPolicy();
+        } else {
+            command += " -Xms" + request.heapSize() + "m";
+            command += " -Xmx" + request.heapSize() + "m";
+        }
+
+        if (request.enableLog()) {
+
+            String baseName = Paths.get(appPath).getFileName().toString().split(".")[0];
+            System.out.println("File name: " + baseName);
+            command += " -Xlog:gc*,safepoint:file=" + baseName + ".log::filecount=0";
+        }
+
+        command += request.gcArgs() != null ? " " + request.gcArgs() : "";
+        command += " -jar " + appPath + " " + request.args();
+
+        System.out.println("Command: " + command);
+        // System.out.println("java" + "-XX:+Use{gc}GC" + "-Xms{heap_size}m" +
+        // "-Xmx{heap_size}m" +
+        // "-Xlog:gc*,safepoint:file={utils.get_benchmark_log_path(gc,
+        // benchmark_group.value, benchmark, heap_size)}::filecount=0"
+        // +
+        // "-jar" +
+        // app +
+        // args);
+        return command.split(" ");
     }
 
     private String[] getTopCommand(long pid) {
