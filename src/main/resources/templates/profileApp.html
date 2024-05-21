@@ -36,8 +36,17 @@
                             </p>
                             <p />
                             <p th:unless="*{cpuIntensive}">
-                                Application is I/O intensive
+                                Application is not CPU intensive
                             </p>
+                            <p
+                                th:text="*{'Average CPU Usage: ' + avgCpuUsage }"
+                            />
+                            <p
+                                th:text="*{'Average CPU Time Percentage: ' + avgCpuTime }"
+                            />
+                            <p
+                                th:text="*{'Average IO Time Percentage: ' + avgIoTime }"
+                            />
                         </div>
                         <div class="col">
                             <p>Do you wish to run the application?</p>
@@ -65,20 +74,28 @@
                                         th:selected="${gcOption} eq ${gc}"
                                     />
                                 </select>
+                                <br />
+                                <br />
                                 <label>GC Args:</label>
                                 <input type="text" th:field="*{gcArgs}" />
+                                <br />
+                                <br />
                                 <label>HeapSize:</label>
                                 <input
                                     type="number"
                                     th:field="*{heapSize}"
                                     required
                                 />
+                                <br />
+                                <br />
 
                                 <label>Custom Heap GC Policy:</label>
                                 <input
                                     type="text"
                                     th:field="*{customHeapGCPolicy}"
                                 />
+                                <br />
+                                <br />
 
                                 <label>Jar:</label>
                                 <!--/* 
@@ -94,14 +111,21 @@
                                         th:selected="${jarOption} eq ${jar}"
                                     />
                                 </select>
+                                <br />
+                                <br />
+
                                 <label>Args:</label>
                                 <input type="text" th:field="*{args}" />
+                                <br />
+                                <br />
 
                                 <label>Enable Log:</label>
                                 <input
                                     type="checkbox"
                                     th:field="*{enableLog}"
                                 />
+                                <br />
+                                <br />
                                 <input type="submit" value="Submit" />
                             </form>
                         </div>

@@ -9,6 +9,9 @@ public record ProfileAppResponse(
         List<Float> cpuUsage,
         List<Float> ioTime,
         List<Float> cpuTime,
+        float avgCpuUsage,
+        float avgCpuTime,
+        float avgIoTime,
         boolean cpuIntensive) {
 
 }

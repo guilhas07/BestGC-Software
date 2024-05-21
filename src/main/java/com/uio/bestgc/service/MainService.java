@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import java.util.Arrays;
+import java.util.LinkedList;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,94 +39,138 @@ public class MainService {
     public MainService() {
         CPU_CORES = Runtime.getRuntime().availableProcessors();
         System.out.println("CPU CORES: " + CPU_CORES);
+
     }
 
     public synchronized ProfileAppResponse profileApp(ProfileAppRequest profileAppRequest, String appPath) {
 
         Process appProcess = null;
         ProfileAppResponse response = null;
-        try {
-            int monitoringTime = profileAppRequest.monitoringTime();
 
-            appProcess = Runtime.getRuntime().exec(getProfileJarCommand(appPath, profileAppRequest.args()));
-            long pid = appProcess.pid();
-            var heapCommand = getHeapCommand(pid);
-            var topCommand = getTopCommand(pid);
-            System.out.println(pid);
-            System.out.println(String.join(" ", heapCommand));
-            System.out.println(String.join(" ", topCommand));
+        final int monitoringTime = profileAppRequest.monitoringTime();
 
-            int is_cpu_intensive = 0; // if < 0 then its I/O intensive
-            List<Float> cpuUsage = new ArrayList<>();
-            List<Float> ioTime = new ArrayList<>();
-            List<Float> cpuTime = new ArrayList<>();
-            List<Float> heapSizes = new ArrayList<>();
+        // metrics
+        List<Float> cpuUsages;
+        List<Float> ioTimes;
+        List<Float> cpuTimes;
+        List<Float> heapSizes;
 
-            long startTime = System.currentTimeMillis();
-            Thread.sleep(1000);
-            while ((System.currentTimeMillis() - startTime) / 1000 < monitoringTime && appProcess.isAlive()) {
+        int[] matrixHeapSizes = matrixService.getHeapSizes();
+        for (int i = 0; i < matrixHeapSizes.length; i++)
+            System.out.println("Aqui : " + matrixHeapSizes[i]);
 
-                var p = Runtime.getRuntime().exec(topCommand);
-                try (var b = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
-                    var lines = b.lines().collect(Collectors.toList());
-                    if (lines.size() != 8) {
-                        // NOTE: correct top output has 8 lines. When it doesn't probably means the
-                        // process already died
-                        System.out.println("[Error]: Top failed");
-                        break;
+        int runId = -1;
+        while (true) {
+            runId++;
+            int heapSize = matrixHeapSizes[runId];
+            try {
+                cpuUsages = new ArrayList<>();
+                ioTimes = new ArrayList<>();
+                cpuTimes = new ArrayList<>();
+                heapSizes = new ArrayList<>();
+
+                appProcess = Runtime.getRuntime()
+                        .exec(getProfileJarCommand(appPath, profileAppRequest.args(), heapSize));
+                long pid = appProcess.pid();
+                System.out.println(pid);
+                var heapCommand = getHeapCommand(pid);
+                var topCommand = getTopCommand(pid);
+                System.out.println(String.join(" ", heapCommand));
+                System.out.println(String.join(" ", topCommand));
+
+                long startTime = System.currentTimeMillis();
+                Thread.sleep(1000);
+                while ((System.currentTimeMillis() - startTime) / 1000 < monitoringTime && appProcess.isAlive()) {
+
+                    var p = Runtime.getRuntime().exec(topCommand);
+                    try (var b = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+                        var lines = b.lines().collect(Collectors.toList());
+                        if (lines.size() != 8) {
+                            // NOTE: correct top output has 8 lines. When it doesn't probably means the
+                            // process already died
+                            System.out.println("[Error]: Top failed");
+                            break;
+                        }
+
+                        // NOTE: from man top(1)
+                        // us, user : time running un-niced user processes
+                        // wa, IO-wait : time waiting for I/O completion
+                        // %Cpu(s): 15.1 us, 2.2 sy, 0.0 ni, 81.2 id, 0.0 wa, 0.0 hi, 1.6 si, 0.0 st
+                        Pattern pattern = Pattern.compile("(\\d+.\\d+) us.*(\\d+.\\d+) wa");
+                        Matcher matcher = pattern.matcher(lines.get(2));
+                        if (!matcher.find()) {
+                            System.out.println("Error: couldn't match cpu us time and IO-wait time in " + lines.get(2));
+                            break;
+                        }
+
+                        float us = (float) Math.round(Float.valueOf(matcher.group(1)) * 100) / 100;
+                        float wa = (float) Math.round(Float.valueOf(matcher.group(2)) * 100) / 100;
+
+                        lines = lines.subList(lines.size() - 2, lines.size());
+                        if (!lines.get(0).trim().split("\\s+")[8].equals("%CPU")) {
+                           System.out.println("[ERROR]: Top command with wrong format");
+                            break;
+                        }
+
+                        float cpuUsage = (float) Math.round(Float.valueOf(lines.get(1).trim().split("\\s+")[8]) * 100)
+                                / 100
+                                / CPU_CORES;
+
+                        // is_cpu_intensive += us > wa ? 1 : us == wa ? 0 : -1;
+                        cpuTimes.add(us);
+                        ioTimes.add(wa);
+                        cpuUsages.add(cpuUsage);
                     }
 
-                    // NOTE: from man top(1)
-                    // us, user : time running un-niced user processes
-                    // wa, IO-wait : time waiting for I/O completion
-                    // %Cpu(s): 15.1 us, 2.2 sy, 0.0 ni, 81.2 id, 0.0 wa, 0.0 hi, 1.6 si, 0.0 st
-                    Pattern pattern = Pattern.compile("(\\d+.\\d+) us.*(\\d+.\\d+) wa");
-                    Matcher matcher = pattern.matcher(lines.get(2));
-                    if (!matcher.find()) {
-                        System.out.println("Error: couldn't match cpu us time and IO-wait time in " + lines.get(2));
-                        break;
+                    p = Runtime.getRuntime().exec(heapCommand);
+                    try (var b = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+                        var line = b.readLine();
+                        heapSizes.add(Float.valueOf(line));
                     }
-
-                    float us = (float) Math.round(Float.valueOf(matcher.group(1)) * 100) / 100;
-                    float wa = (float) Math.round(Float.valueOf(matcher.group(2)) * 100) / 100;
-
-                    lines = lines.subList(lines.size() - 2, lines.size());
-                    if (!lines.get(0).trim().split("\\s+")[8].equals("%CPU")) {
-                        System.out.println("[ERROR]: Top command with wrong format");
-                        break;
-                    }
-
-                    float cpuAvg = (float) Math.round(Float.valueOf(lines.get(1).trim().split("\\s+")[8]) * 100) / 100
-                            / CPU_CORES;
-
-                    is_cpu_intensive += us > wa ? 1 : -1;
-                    cpuTime.add(us);
-                    ioTime.add(wa);
-                    cpuUsage.add(cpuAvg);
+                    // Double maxHeapUsage = statistics.getMaxHeapUsage() * 1.2 / 1024;
                 }
 
-                p = Runtime.getRuntime().exec(heapCommand);
-                try (var b = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
-                    var line = b.readLine();
-                    heapSizes.add(Float.valueOf(line));
+                // if process is still executing or its return code is 0 i.e., success
+                if (appProcess.isAlive() || appProcess.exitValue() == 0) {
+                    System.out.println("A SAIRRRRRRRRRR");
+                    break;
                 }
-                // Double maxHeapUsage = statistics.getMaxHeapUsage() * 1.2 / 1024;
+
+                // process executed successfully
+                if (appProcess.exitValue() != 0 && runId == matrixHeapSizes.length) {
+                    System.out.println("App failed when using: " + matrixHeapSizes[runId]);
+                    // TODO: create better exceptions
+                    return null;
+                }
+
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
             }
-
-            float maxHeap = heapSizes.stream().max(Float::compare).orElseThrow() / 1024;
-
-            float maxHeapUsage = maxHeap * 1.2f; // NOTE: recommend heapSize
-
-            BestGC bestGC = matrixService.getBestGC(is_cpu_intensive >= 0, maxHeapUsage,
-                    profileAppRequest.throughputWeight(), profileAppRequest.pauseTimeWeight());
-
-            response = new ProfileAppResponse(bestGC.gc(), bestGC.heapSize(), maxHeap, cpuUsage, ioTime,
-                    cpuTime, is_cpu_intensive >= 0);
-            System.out.println(response);
-        } catch (Exception e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
         }
+        float maxHeap = heapSizes.stream().max(Float::compare).orElseThrow() / 1024;
+
+        float maxHeapUsage = maxHeap * 1.2f; // NOTE: recommend heapSize
+
+        float totalCpuUsage = 0;
+        float totalCpuTime = 0;
+        float totalIoTime = 0;
+        for (int i = 0; i < cpuUsages.size(); i++) {
+            totalCpuUsage += cpuUsages.get(i);
+            totalCpuTime += cpuTimes.get(i);
+            totalIoTime += ioTimes.get(i);
+        }
+        float avgCpuUsage = (float)Math.round(totalCpuUsage / cpuUsages.size() * 100) / 100; 
+        float avgCpuTime =  (float)Math.round(totalCpuTime / cpuUsages.size() * 100) / 100; 
+        float avgIoTime =  (float)Math.round(totalIoTime / cpuUsages.size() * 100) / 100;
+
+        boolean isCpuIntensive = totalCpuUsage / cpuUsages.size() >= 60;
+        BestGC bestGC = matrixService.getBestGC(isCpuIntensive, maxHeapUsage,
+                profileAppRequest.throughputWeight(), profileAppRequest.pauseTimeWeight());
+
+        response = new ProfileAppResponse(bestGC.gc(), bestGC.heapSize(), maxHeap, cpuUsages, ioTimes,
+                cpuTimes,  avgCpuUsage, avgCpuTime, avgIoTime, isCpuIntensive);
+        System.out.println(response);
 
         if (appProcess != null && appProcess.isAlive())
             appProcess.destroy();
@@ -173,9 +218,12 @@ public class MainService {
         return fileNames.toArray(String[]::new);
     }
 
-    private String[] getProfileJarCommand(String app, String args) {
-        System.out.println("java -jar " + app + " " + args);
-        return ("java -jar " + app + " " + args).split(" ");
+    private String[] getProfileJarCommand(String app, String args, int heapSize) {
+        String minHeapSize = "-Xms" + heapSize + "m";
+        String maxHeapSize = "-Xmx" + heapSize + "m";
+        System.out.println("java -jar " + maxHeapSize + " " + minHeapSize + app + " " + args);
+
+        return ("java -jar " + maxHeapSize + " " + minHeapSize + " " + app + " " + args).split(" ");
     }
 
     private String[] getExecJarCommand(RunAppRequest request, String appPath) {
