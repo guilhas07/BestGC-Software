@@ -7,13 +7,12 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.2.5</version>
-        <relativePath></relativePath>
+        <relativePath />
         <!-- lookup parent from repository -->
     </parent>
     <groupId>com.uio</groupId>
     <artifactId>bestGC</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <packaging>jar</packaging>
     <name>bestGC</name>
     <description>bestGC</description>
     <properties>
@@ -88,7 +87,23 @@
             <!--    <configuration>-->
             <!--        <jvmArguments>\-\-enable-preview</jvmArguments>-->
             <!--    </configuration>-->
-            <!--</plugin>-->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>spring-boot</classifier>
+                            <mainClass>
+                                com.uio.bestgc.BestGcApplication
+                            </mainClass>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
