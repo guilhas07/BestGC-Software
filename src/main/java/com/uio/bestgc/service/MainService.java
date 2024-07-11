@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedList;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -215,6 +216,7 @@ public class MainService {
 
         Arrays.stream(files).forEach(f -> fileNames.add(f.getName()));
 
+        fileNames.sort(Comparator.naturalOrder());
         return fileNames.toArray(String[]::new);
     }
 
