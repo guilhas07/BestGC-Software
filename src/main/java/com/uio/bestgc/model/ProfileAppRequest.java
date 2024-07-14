@@ -4,6 +4,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 // @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record ProfileAppRequest(
+        boolean automaticMode,
         double throughputWeight,
         double pauseTimeWeight,
         int monitoringTime,

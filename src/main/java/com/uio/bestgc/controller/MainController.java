@@ -35,7 +35,7 @@ public class MainController {
     @GetMapping("/")
     public String index(Model model) {
         System.out.println(monitoringTime);
-        model.addAttribute("profile", new ProfileAppRequest(1, 0, monitoringTime, null, null, null));
+        model.addAttribute("profile", new ProfileAppRequest(true, 1, 0, monitoringTime, null, null, null));
         model.addAttribute("jars", mainService.getJars());
         return "index";
     }
@@ -46,7 +46,7 @@ public class MainController {
         try {
             var file = profileRequest.file();
             var dest = Paths.get("jars").resolve(profileRequest.jar());
-            if (!file.isEmpty()) {
+            if (file != null && !file.isEmpty()) {
                 dest = Paths.get("jars").resolve(file.getOriginalFilename());
                 Files.copy(file.getInputStream(), dest, StandardCopyOption.REPLACE_EXISTING);
             }

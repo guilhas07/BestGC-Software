@@ -50,16 +50,12 @@ public class MainService {
 
         final int monitoringTime = profileAppRequest.monitoringTime();
 
-        // metrics
         List<Float> cpuUsages;
         List<Float> ioTimes;
         List<Float> cpuTimes;
         List<Float> heapSizes;
 
         int[] matrixHeapSizes = matrixService.getHeapSizes();
-        for (int i = 0; i < matrixHeapSizes.length; i++)
-            System.out.println("Aqui : " + matrixHeapSizes[i]);
-
         int runId = -1;
         while (true) {
             runId++;
@@ -109,7 +105,7 @@ public class MainService {
 
                         lines = lines.subList(lines.size() - 2, lines.size());
                         if (!lines.get(0).trim().split("\\s+")[8].equals("%CPU")) {
-                           System.out.println("[ERROR]: Top command with wrong format");
+                            System.out.println("[ERROR]: Top command with wrong format");
                             break;
                         }
 
@@ -131,15 +127,12 @@ public class MainService {
                     // Double maxHeapUsage = statistics.getMaxHeapUsage() * 1.2 / 1024;
                 }
 
-                // if process is still executing or its return code is 0 i.e., success
                 if (appProcess.isAlive() || appProcess.exitValue() == 0) {
-                    System.out.println("A SAIRRRRRRRRRR");
                     break;
                 }
 
-                // process executed successfully
-                if (appProcess.exitValue() != 0 && runId == matrixHeapSizes.length) {
-                    System.out.println("App failed when using: " + matrixHeapSizes[runId]);
+                // App failed for every available heap size
+                if (appProcess.exitValue() != 0 && runId == matrixHeapSizes.length - 1) {
                     // TODO: create better exceptions
                     return null;
                 }
@@ -161,16 +154,22 @@ public class MainService {
             totalCpuTime += cpuTimes.get(i);
             totalIoTime += ioTimes.get(i);
         }
-        float avgCpuUsage = (float)Math.round(totalCpuUsage / cpuUsages.size() * 100) / 100; 
-        float avgCpuTime =  (float)Math.round(totalCpuTime / cpuUsages.size() * 100) / 100; 
-        float avgIoTime =  (float)Math.round(totalIoTime / cpuUsages.size() * 100) / 100;
+        float avgCpuUsage = (float) Math.round(totalCpuUsage / cpuUsages.size() * 100) / 100;
+        float avgCpuTime = (float) Math.round(totalCpuTime / cpuUsages.size() * 100) / 100;
+        float avgIoTime = (float) Math.round(totalIoTime / cpuUsages.size() * 100) / 100;
 
+        // TODO: use variable for cpu constant
         boolean isCpuIntensive = totalCpuUsage / cpuUsages.size() >= 60;
-        BestGC bestGC = matrixService.getBestGC(isCpuIntensive, maxHeapUsage,
+        BestGC bestGC = null;
+        if (profileAppRequest.automaticMode()) {
+            bestGC = matrixService.getBestGC(isCpuIntensive, avgCpuUsage, maxHeapUsage);
+        } else {
+            bestGC = matrixService.getBestGC(isCpuIntensive, maxHeapUsage,
                 profileAppRequest.throughputWeight(), profileAppRequest.pauseTimeWeight());
+        }
 
         response = new ProfileAppResponse(bestGC.gc(), bestGC.heapSize(), maxHeap, cpuUsages, ioTimes,
-                cpuTimes,  avgCpuUsage, avgCpuTime, avgIoTime, isCpuIntensive);
+                cpuTimes, avgCpuUsage, avgCpuTime, avgIoTime, isCpuIntensive);
         System.out.println(response);
 
         if (appProcess != null && appProcess.isAlive())

@@ -77,8 +77,10 @@ public class BestGcApplication {
                 return;
             }
 
+            // TODO: override automatic mode
             var response = mainService.profileApp(
-                    new ProfileAppRequest(throughputWeight, pauseTimeWeight, monitoringTime, pathToJar, jarArgs, null),
+                    new ProfileAppRequest(false, throughputWeight, pauseTimeWeight, monitoringTime, pathToJar, jarArgs,
+                            null),
                     pathToJar);
             System.out.println(response);
         }
