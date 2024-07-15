@@ -18,13 +18,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 import com.uio.bestgc.model.ProfileAppRequest;
 import com.uio.bestgc.model.ProfileAppResponse;
 import com.uio.bestgc.model.RunAppRequest;
-import com.uio.bestgc.service.MainService;
+import com.uio.bestgc.service.ProfileService;
+import com.uio.bestgc.service.RunService;
 
 @Controller
 public class MainController {
 
     @Autowired
-    MainService mainService;
+    ProfileService profileService;
+
+    @Autowired
+    RunService runService;
 
     @Value("${monitoring-time}")
     int monitoringTime;
@@ -35,13 +39,20 @@ public class MainController {
     @GetMapping("/")
     public String index(Model model) {
         System.out.println(monitoringTime);
-        model.addAttribute("profile", new ProfileAppRequest(true, 1, 0, monitoringTime, null, null, null));
-        model.addAttribute("jars", mainService.getJars());
+        model.addAttribute("profile", new ProfileAppRequest(true, true, 1, 0, monitoringTime, null, null, null));
+        model.addAttribute("jars", profileService.getJars());
         return "index";
     }
 
     @PostMapping(value = "/profile_app", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public String profileApplication(@ModelAttribute ProfileAppRequest profileRequest, Model model) {
+        // try {
+        // Thread.sleep(20_000);
+        // return "giro";
+        // } catch (InterruptedException e) {
+        // // TODO Auto-generated catch block
+        // e.printStackTrace();
+        // }
         System.out.println(profileRequest);
         try {
             var file = profileRequest.file();
@@ -51,21 +62,42 @@ public class MainController {
                 Files.copy(file.getInputStream(), dest, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            var response = mainService.profileApp(profileRequest, dest.toString());
-            model.addAttribute("profileAppResponse", response);
-            model.addAttribute("gcs", mainService.getAvailableGCs());
-            model.addAttribute("gc", response.bestGC());
-            model.addAttribute("runAppRequest",
-                    new RunAppRequest(null, null, response.heapSize(), null, null, profileRequest.args(), false, null));
+            // TODO: uncomment
+            // var response = profileService.profileApp(profileRequest, dest.toString());
+            ProfileAppResponse response = null;
+            // TODO: handle null response
+
+            if (profileRequest.runApp()) {
+                // var myobj = new Object() {
+                // public String teste = "Boas";
+                // };
+                // System.out.println("Teste antes: " + myobj.teste);
+                // var t = Thread.startVirtualThread(() -> {
+                // myobj.teste = "fds";
+                // // profileService.runApp(new RunAppRequest(response.bestGC(), null,
+                // // response.heapSize(), null, null,
+                // // profileRequest.args(), true, null), dest.toString());
+                // System.out.println("Teste dentro: " + myobj.teste);
+                //
+                // });
+                // t.join();
+                // System.out.println("Teste fora: " + myobj.teste);
+            }
+
+            // model.addAttribute("profileAppResponse", response);
+            // model.addAttribute("gcs", profileService.getAvailableGCs());
+            // model.addAttribute("gc", response.bestGC());
+            // model.addAttribute("runAppRequest",
+            // new RunAppRequest(null, null, response.heapSize(), null, null,
+            // profileRequest.args(), false, null));
             // model.addAttribute("jars",
             // Arrays.asList(mainService.getJars()).stream().filter(s -> s !=
             // profileRequest.jar()));
-            model.addAttribute("jars", mainService.getJars());
-            model.addAttribute("jar", profileRequest.jar());
-            System.out.println("AQUI");
-            return "profileApp";
+            // model.addAttribute("jars", profileService.getJars());
+            // model.addAttribute("jar", profileRequest.jar());
+            return "fragments/profileApp";
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
@@ -73,7 +105,7 @@ public class MainController {
     }
 
     @GetMapping(value = "/run_app")
-    public String getRunApplicationPage() {
+    public String runApp() {
         return "runApp";
     }
 
@@ -89,7 +121,7 @@ public class MainController {
         // Files.copy(file.getInputStream(), dest, StandardCopyOption.REPLACE_EXISTING);
         // }
 
-        var response = mainService.runApp(runAppRequest, dest.toString());
+        var response = profileService.runApp(runAppRequest, dest.toString());
         model.addAttribute("runAppResponse", response);
         return "runAppResponse";
 

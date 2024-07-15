@@ -8,13 +8,11 @@ window.onload = function () {
 
     function handleCustomFileDisplay() {
         if (jar.value == "Custom") {
-            //file.type = "file";
             file.style.display = "block";
             file.required = true;
             return;
         }
         file.required = false;
-        //file.type = "hidden";
         file.style.display = "none";
     }
     function handleAutomaticModeDisplay() {

@@ -25,7 +25,7 @@ import com.uio.bestgc.model.RunAppRequest;
 import com.uio.bestgc.model.RunAppResponse;
 
 @Service
-public class MainService {
+public class ProfileService {
 
     @Autowired
     MatrixService matrixService;
@@ -37,7 +37,7 @@ public class MainService {
 
     final private int CPU_CORES;
 
-    public MainService() {
+    public ProfileService() {
         CPU_CORES = Runtime.getRuntime().availableProcessors();
         System.out.println("CPU CORES: " + CPU_CORES);
 
@@ -165,7 +165,7 @@ public class MainService {
             bestGC = matrixService.getBestGC(isCpuIntensive, avgCpuUsage, maxHeapUsage);
         } else {
             bestGC = matrixService.getBestGC(isCpuIntensive, maxHeapUsage,
-                profileAppRequest.throughputWeight(), profileAppRequest.pauseTimeWeight());
+                    profileAppRequest.throughputWeight(), profileAppRequest.pauseTimeWeight());
         }
 
         response = new ProfileAppResponse(bestGC.gc(), bestGC.heapSize(), maxHeap, cpuUsages, ioTimes,

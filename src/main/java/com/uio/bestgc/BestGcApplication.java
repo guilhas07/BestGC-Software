@@ -10,13 +10,14 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import com.uio.bestgc.model.ProfileAppRequest;
-import com.uio.bestgc.service.MainService;
+import com.uio.bestgc.service.ProfileService;
+import com.uio.bestgc.service.RunService;
 
 @SpringBootApplication
 public class BestGcApplication {
 
     @Autowired
-    private MainService mainService;
+    private ProfileService profileService;
 
     @Value("${monitoring-time}")
     private int monitoringTime;
@@ -78,8 +79,9 @@ public class BestGcApplication {
             }
 
             // TODO: override automatic mode
-            var response = mainService.profileApp(
-                    new ProfileAppRequest(false, throughputWeight, pauseTimeWeight, monitoringTime, pathToJar, jarArgs,
+            var response = profileService.profileApp(
+                    new ProfileAppRequest(false, false, throughputWeight, pauseTimeWeight, monitoringTime, pathToJar,
+                            jarArgs,
                             null),
                     pathToJar);
             System.out.println(response);

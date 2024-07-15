@@ -2,7 +2,6 @@ package com.uio.bestgc.model;
 
 import org.springframework.web.multipart.MultipartFile;
 
-// @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record RunAppRequest(
         String garbageCollector,
         String gcArgs,
