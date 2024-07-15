@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import com.uio.bestgc.model.ProfileAppRequest;
 import com.uio.bestgc.model.ProfileAppResponse;
 import com.uio.bestgc.model.RunAppRequest;
+import com.uio.bestgc.service.MatrixService;
 import com.uio.bestgc.service.ProfileService;
 import com.uio.bestgc.service.RunService;
 
@@ -29,6 +30,9 @@ public class MainController {
 
     @Autowired
     RunService runService;
+
+    @Autowired
+    MatrixService matrixService;
 
     @Value("${monitoring-time}")
     int monitoringTime;
@@ -105,30 +109,33 @@ public class MainController {
     }
 
     @GetMapping(value = "/run_app")
-    public String runApp() {
+    public String runApp(Model model) {
+        model.addAttribute("run", new RunAppRequest(null, null, null, 0, null));
+        model.addAttribute("gcs", profileService.getGCs());
+        model.addAttribute("jars", profileService.getJars());
+        model.addAttribute("heapSizes", matrixService.getHeapSizes());
         return "runApp";
     }
 
     @PostMapping(value = "/run_app", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     public String runApplication(@ModelAttribute RunAppRequest runAppRequest, Model model) {
         System.out.println(runAppRequest);
-        // try {
+
         var file = runAppRequest.file();
         var dest = Paths.get("jars").resolve(runAppRequest.jar());
-        // TODO: enable possibility to receive jar
-        // if (!file.isEmpty()) {
-        // dest = Paths.get("jars").resolve(file.getOriginalFilename());
-        // Files.copy(file.getInputStream(), dest, StandardCopyOption.REPLACE_EXISTING);
-        // }
+        if (file != null && !file.isEmpty()) {
+            dest = Paths.get("jars").resolve(file.getOriginalFilename());
+            try {
+                Files.copy(file.getInputStream(), dest, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
 
-        var response = profileService.runApp(runAppRequest, dest.toString());
+        var response = runService.runApp(runAppRequest, dest.toString());
         model.addAttribute("runAppResponse", response);
         return "runAppResponse";
-
-        // } catch (IOException e) {
-        // // TODO Auto-generated catch block
-        // e.printStackTrace();
-        // }
     }
 
 }

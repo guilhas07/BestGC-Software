@@ -40,9 +40,18 @@ public class ProfileService {
     public ProfileService() {
         CPU_CORES = Runtime.getRuntime().availableProcessors();
         System.out.println("CPU CORES: " + CPU_CORES);
-
     }
 
+    /**
+     * Profile application in order to discover the best Garbage Collector and the
+     * minimal heap Size required to run it.
+     * Method is synchronized so the benchmark is executed with minimal
+     * interference.
+     *
+     * @param profileAppRequest
+     * @param appPath           Path for application jar
+     * @return ProfileAppResponse
+     */
     public synchronized ProfileAppResponse profileApp(ProfileAppRequest profileAppRequest, String appPath) {
 
         Process appProcess = null;
@@ -179,30 +188,7 @@ public class ProfileService {
 
     }
 
-    public synchronized RunAppResponse runApp(RunAppRequest runAppRequest, String appPath) {
-
-        Process appProcess = null;
-        try {
-            appProcess = Runtime.getRuntime()
-                    .exec(getExecJarCommand(runAppRequest, appPath));
-
-            // TODO: some kind of status return
-            System.out.println("App process running with pid: " + appProcess.pid());
-        } catch (Exception e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-            return null;
-        }
-        return new RunAppResponse();
-
-        // if (appProcess != null && appProcess.isAlive())
-        // appProcess.destroy();
-
-        // return response;
-
-    }
-
-    public String[] getAvailableGCs() {
+    public String[] getGCs() {
         // TODO: find / implement a way to get available GCs
         return new String[] { "G1", "Parallel", "Z" };
     }
@@ -225,42 +211,6 @@ public class ProfileService {
         System.out.println("java -jar " + maxHeapSize + " " + minHeapSize + app + " " + args);
 
         return ("java -jar " + maxHeapSize + " " + minHeapSize + " " + app + " " + args).split(" ");
-    }
-
-    private String[] getExecJarCommand(RunAppRequest request, String appPath) {
-        // TODO: use string builder
-        String command = "java";
-        String gc = request.garbageCollector();
-        command += gc != null ? " -XX:+Use" + gc + "GC" : "";
-
-        // Heap size and custom policy
-        if (request.customHeapGCPolicy() != null) {
-            command += " " + request.customHeapGCPolicy();
-        } else {
-            command += " -Xms" + request.heapSize() + "m";
-            command += " -Xmx" + request.heapSize() + "m";
-        }
-
-        if (request.enableLog()) {
-
-            String baseName = Paths.get(appPath).getFileName().toString().split(".")[0];
-            System.out.println("File name: " + baseName);
-            command += " -Xlog:gc*,safepoint:file=" + baseName + ".log::filecount=0";
-        }
-
-        command += request.gcArgs() != null ? " " + request.gcArgs() : "";
-        command += " -jar " + appPath + " " + request.args();
-
-        System.out.println("Command: " + command);
-        // System.out.println("java" + "-XX:+Use{gc}GC" + "-Xms{heap_size}m" +
-        // "-Xmx{heap_size}m" +
-        // "-Xlog:gc*,safepoint:file={utils.get_benchmark_log_path(gc,
-        // benchmark_group.value, benchmark, heap_size)}::filecount=0"
-        // +
-        // "-jar" +
-        // app +
-        // args);
-        return command.split(" ");
     }
 
     private String[] getTopCommand(long pid) {

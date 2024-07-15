@@ -1,20 +1,48 @@
-window.onload = function () {
+const currentPage = window.location.pathname;
+
+switch (currentPage) {
+    case "/":
+        showProfilePage();
+        break;
+    case "/run_app":
+        showRunAppPage();
+        break;
+    default:
+}
+
+function showRunAppPage() {
+    let form = document.getElementById("form");
+    let heapSizeSelection = form["heapSizeSelection"];
+    let heapSize = form["heapSize"];
+
+    function handleHeapSizeDisplay() {
+        if (heapSizeSelection.value == "Custom") {
+            heapSize.style.display = "block";
+            heapSize.labels[0].style.display = "block";
+        } else {
+            heapSize.style.display = "none";
+            heapSize.labels[0].style.display = "none";
+            heapSize.value = heapSizeSelection.value;
+        }
+    }
+
+    form["jar"].addEventListener("change", handleCustomFileDisplay);
+    form["heapSizeSelection"].addEventListener("change", handleHeapSizeDisplay);
+
+    handleHeapSizeDisplay();
+    handleCustomFileDisplay();
+
+    // NOTE: show body now to prevent jitters in display
+    document.body.style.display = "block";
+}
+
+function showProfilePage() {
     let form = document.getElementById("form");
     let automaticMode = form["automaticMode"];
     let tw_input = form["throughputWeight"];
     let pw_input = form["pauseTimeWeight"];
     let jar = form["jar"];
-    let file = form["file"];
 
-    function handleCustomFileDisplay() {
-        if (jar.value == "Custom") {
-            file.style.display = "block";
-            file.required = true;
-            return;
-        }
-        file.required = false;
-        file.style.display = "none";
-    }
     function handleAutomaticModeDisplay() {
         if (!automaticMode.checked) {
             tw_input.type = "number";
@@ -30,33 +58,32 @@ window.onload = function () {
         pw_input.type = "hidden";
     }
 
-    handleCustomFileDisplay();
-    handleAutomaticModeDisplay();
-
     automaticMode.addEventListener("change", handleAutomaticModeDisplay);
 
     jar.addEventListener("change", handleCustomFileDisplay);
 
     tw_input.addEventListener("input", function () {
-        let tw = tw_input.valueAsNumber;
-        if (isNaN(tw) || tw > 1 || tw < 0) return;
+        let tw = tw_input.value;
+        if (tw > 1 || tw < 0) return;
         pw_input.value = (1 - tw).toFixed(2);
     });
 
     pw_input.addEventListener("input", function () {
-        let pw = pw_input.valueAsNumber;
-        if (isNaN(pw) || pw > 1 || pw < 0) return;
+        let pw = pw_input.value;
+        if (pw > 1 || pw < 0) return;
         tw_input.value = (1 - pw).toFixed(2);
     });
 
+    handleCustomFileDisplay();
+    handleAutomaticModeDisplay();
+
     // NOTE: show body now to prevent jitters in display
     document.body.style.display = "block";
-};
+}
 
 // handle profile request
 htmx.onLoad(function (target) {
     console.log(target);
-    console.log("AQUI");
     console.log(cpu_usage);
     console.log(io_time);
     console.log(cpu_time);
@@ -115,3 +142,16 @@ htmx.onLoad(function (target) {
         console.log(error);
     }
 });
+
+function handleCustomFileDisplay() {
+    let form = document.getElementById("form");
+    let jar = form["jar"];
+    let file = form["file"];
+    if (jar.value == "Custom") {
+        file.style.display = "block";
+        file.required = true;
+        return;
+    }
+    file.required = false;
+    file.style.display = "none";
+}

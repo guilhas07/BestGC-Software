@@ -9,7 +9,7 @@
             integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
             crossorigin="anonymous"
         />
-        <script src="scripts/script.js"></script>
+        <script src="scripts/script.js" defer></script>
         <script
             src="https://unpkg.com/htmx.org@2.0.0"
             integrity="sha384-wS5l5IKJBvK6sPTKa2WZ1js3d947pvWXbPJ1OmWfEuxLgeHcEbjUUA5i9V5ZkpCw"
@@ -18,7 +18,7 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
     <body style="display: none">
-        <div th:replace="fragments/nav :: nav"></div>
+        <div th:replace="~{fragments/nav :: navbar('Profile')}"></div>
         <main class="mt-3 container">
             <form
                 id="form"
@@ -29,7 +29,7 @@
                 enctype="multipart/form-data"
                 hx-swap="outerHTML"
             >
-                <h2 class="mb-3">Applications Parameters</h2>
+                <h2 class="mb-3">Application Parameters</h2>
                 <div class="form-check mb-3">
                     <input
                         type="checkbox"

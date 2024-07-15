@@ -33,6 +33,10 @@ public class MatrixService {
         return matrix.cpu_intensive_matrix().keySet().stream().mapToInt(Integer::valueOf).sorted().toArray();
     }
 
+    public int[] getHeapSizes() {
+        var matrix = matrix.cpu_intensive_matrix();
+    }
+
     public BestGC getBestGC(boolean cpuIntensive, float cpuAvgPercentage, float maxHeapUsed) {
         var local_matrix = cpuIntensive ? matrix.cpu_intensive_matrix() : matrix.non_cpu_intensive_matrix();
 
