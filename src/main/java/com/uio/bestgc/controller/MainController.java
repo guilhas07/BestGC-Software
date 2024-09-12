@@ -66,9 +66,7 @@ public class MainController {
                 Files.copy(file.getInputStream(), dest, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            // TODO: uncomment
-            // var response = profileService.profileApp(profileRequest, dest.toString());
-            ProfileAppResponse response = null;
+            var response = profileService.profileApp(profileRequest, dest.toString());
             // TODO: handle null response
 
             if (profileRequest.runApp()) {
@@ -88,17 +86,16 @@ public class MainController {
                 // System.out.println("Teste fora: " + myobj.teste);
             }
 
-            // model.addAttribute("profileAppResponse", response);
-            // model.addAttribute("gcs", profileService.getAvailableGCs());
-            // model.addAttribute("gc", response.bestGC());
+            model.addAttribute("profileAppResponse", response);
+            model.addAttribute("gcs", profileService.getGCs());
+            model.addAttribute("gc", response.bestGC());
             // model.addAttribute("runAppRequest",
             // new RunAppRequest(null, null, response.heapSize(), null, null,
             // profileRequest.args(), false, null));
-            // model.addAttribute("jars",
-            // Arrays.asList(mainService.getJars()).stream().filter(s -> s !=
-            // profileRequest.jar()));
-            // model.addAttribute("jars", profileService.getJars());
-            // model.addAttribute("jar", profileRequest.jar());
+            model.addAttribute("jars",
+                    Arrays.asList(profileService.getJars()).stream().filter(s -> s != profileRequest.jar()));
+            model.addAttribute("jars", profileService.getJars());
+            model.addAttribute("jar", profileRequest.jar());
             return "fragments/profileApp";
 
         } catch (Exception e) {
@@ -136,6 +133,12 @@ public class MainController {
         var response = runService.runApp(runAppRequest, dest.toString());
         model.addAttribute("runAppResponse", response);
         return "runAppResponse";
+    }
+
+    @GetMapping(value = "/apps")
+    public String getApps(Model model) {
+        model.addAttribute("apps", runService.getApps());
+        return "apps";
     }
 
 }

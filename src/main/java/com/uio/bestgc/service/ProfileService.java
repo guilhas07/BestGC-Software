@@ -3,6 +3,7 @@ package com.uio.bestgc.service;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -25,6 +26,7 @@ import com.uio.bestgc.model.RunAppRequest;
 import com.uio.bestgc.model.RunAppResponse;
 
 @Service
+
 public class ProfileService {
 
     @Autowired
@@ -79,60 +81,23 @@ public class ProfileService {
                         .exec(getProfileJarCommand(appPath, profileAppRequest.args(), heapSize));
                 long pid = appProcess.pid();
                 System.out.println(pid);
-                var heapCommand = getHeapCommand(pid);
-                var topCommand = getTopCommand(pid);
-                System.out.println(String.join(" ", heapCommand));
-                System.out.println(String.join(" ", topCommand));
 
                 long startTime = System.currentTimeMillis();
                 Thread.sleep(1000);
                 while ((System.currentTimeMillis() - startTime) / 1000 < monitoringTime && appProcess.isAlive()) {
 
-                    var p = Runtime.getRuntime().exec(topCommand);
-                    try (var b = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
-                        var lines = b.lines().collect(Collectors.toList());
-                        if (lines.size() != 8) {
-                            // NOTE: correct top output has 8 lines. When it doesn't probably means the
-                            // process already died
-                            System.out.println("[Error]: Top failed");
-                            break;
-                        }
+                    var topResponse = executeTop(pid);
+                    if (topResponse == null)
+                        break;
 
-                        // NOTE: from man top(1)
-                        // us, user : time running un-niced user processes
-                        // wa, IO-wait : time waiting for I/O completion
-                        // %Cpu(s): 15.1 us, 2.2 sy, 0.0 ni, 81.2 id, 0.0 wa, 0.0 hi, 1.6 si, 0.0 st
-                        Pattern pattern = Pattern.compile("(\\d+.\\d+) us.*(\\d+.\\d+) wa");
-                        Matcher matcher = pattern.matcher(lines.get(2));
-                        if (!matcher.find()) {
-                            System.out.println("Error: couldn't match cpu us time and IO-wait time in " + lines.get(2));
-                            break;
-                        }
+                    var heapResponse = executeHeapCommand(pid);
+                    if (heapResponse == null)
+                        break;
 
-                        float us = (float) Math.round(Float.valueOf(matcher.group(1)) * 100) / 100;
-                        float wa = (float) Math.round(Float.valueOf(matcher.group(2)) * 100) / 100;
-
-                        lines = lines.subList(lines.size() - 2, lines.size());
-                        if (!lines.get(0).trim().split("\\s+")[8].equals("%CPU")) {
-                            System.out.println("[ERROR]: Top command with wrong format");
-                            break;
-                        }
-
-                        float cpuUsage = (float) Math.round(Float.valueOf(lines.get(1).trim().split("\\s+")[8]) * 100)
-                                / 100
-                                / CPU_CORES;
-
-                        // is_cpu_intensive += us > wa ? 1 : us == wa ? 0 : -1;
-                        cpuTimes.add(us);
-                        ioTimes.add(wa);
-                        cpuUsages.add(cpuUsage);
-                    }
-
-                    p = Runtime.getRuntime().exec(heapCommand);
-                    try (var b = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
-                        var line = b.readLine();
-                        heapSizes.add(Float.valueOf(line));
-                    }
+                    cpuTimes.add(topResponse.cpuTime());
+                    cpuUsages.add(topResponse.cpuUsage());
+                    ioTimes.add(topResponse.ioTime());
+                    heapSizes.add(heapResponse.heapSize());
                     // Double maxHeapUsage = statistics.getMaxHeapUsage() * 1.2 / 1024;
                 }
 
@@ -188,6 +153,72 @@ public class ProfileService {
 
     }
 
+    HeapCmdResponse executeHeapCommand(long pid) {
+        try {
+
+            var heapCommand = getHeapCommand(pid);
+            Process p = Runtime.getRuntime().exec(heapCommand);
+            try (var b = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+                // NOTE: If process doesn't exist this returns 0.00
+                String line = b.readLine();
+                float heapSize = Float.valueOf(line);
+                if (heapSize == 0)
+                    return null;
+                return new HeapCmdResponse(heapSize);
+            }
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    TopCmdResponse executeTop(long pid) {
+        try {
+            Process p = Runtime.getRuntime().exec(getTopCommand(pid));
+
+            try (var b = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+                var lines = b.lines().collect(Collectors.toList());
+                if (lines.size() != 8) {
+                    // NOTE: correct top output has 8 lines. When it doesn't probably means the
+                    // process already died
+                    System.out.println("Warning: Couldn't execute top for app with pid: " + pid);
+                    return null;
+                }
+
+                // NOTE: from man top(1)
+                // us, user : time running un-niced user processes
+                // wa, IO-wait : time waiting for I/O completion
+                // %Cpu(s): 15.1 us, 2.2 sy, 0.0 ni, 81.2 id, 0.0 wa, 0.0 hi, 1.6 si, 0.0 st
+                Pattern pattern = Pattern.compile("(\\d+.\\d+) us.*(\\d+.\\d+) wa");
+                Matcher matcher = pattern.matcher(lines.get(2));
+                if (!matcher.find()) {
+                    System.out.println("Error: couldn't match cpu us time and IO-wait time in " + lines.get(2));
+                    System.exit(1);
+                }
+
+                float us = (float) Math.round(Float.valueOf(matcher.group(1)) * 100) / 100;
+                float wa = (float) Math.round(Float.valueOf(matcher.group(2)) * 100) / 100;
+
+                lines = lines.subList(lines.size() - 2, lines.size());
+                if (!lines.get(0).trim().split("\\s+")[8].equals("%CPU")) {
+                    System.out.println("Error: Top command with wrong format");
+                    System.exit(1);
+                }
+
+                float cpuUsage = (float) Math.round(Float.valueOf(lines.get(1).trim().split("\\s+")[8]) * 100)
+                        / 100
+                        / CPU_CORES;
+
+                return new TopCmdResponse(us, cpuUsage, wa);
+            }
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public String[] getGCs() {
         // TODO: find / implement a way to get available GCs
         return new String[] { "G1", "Parallel", "Z" };
@@ -217,10 +248,16 @@ public class ProfileService {
         return ("top -bn 1 -p " + pid).split(" ");
     }
 
-    private String[] getHeapCommand(long pid) throws Exception {
+    private String[] getHeapCommand(long pid) {
         // NOTE: Using /bin/bash -c to use pipes. \\n to prevent early expansion.
         return new String[] { "/bin/bash", "-c",
                 "jstat -gc " + pid + " | awk 'END {sum = $4 + $6 + $8 + $10 + $12; printf \"%.2f\\n\", sum}'" };
     }
 
 }
+
+record TopCmdResponse(float cpuTime, float cpuUsage, float ioTime) {
+};
+
+record HeapCmdResponse(float heapSize) {
+};

@@ -4,51 +4,90 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.uio.bestgc.model.PollAppResponse;
 import com.uio.bestgc.model.RunAppRequest;
 import com.uio.bestgc.model.RunAppResponse;
 
 @Service
 public class RunService {
 
-    Map<UUID, AppData> runningAppsData = new ConcurrentHashMap<>();
+    Map<Long, AppInfo> runningApps = new HashMap<>();
 
-    Object lock = new Object();
+    @Autowired
+    ProfileService profileService;
 
     public RunService() {
+        // TODO: remove
+        runningApps.put(0L, new AppInfo("teste", "teste 1 2 3 4"));
+        runningApps.put(1L, new AppInfo("teste2", "giro hello"));
     }
 
     public RunAppResponse runApp(RunAppRequest runAppRequest, String appPath) {
 
-        var id = java.util.UUID.randomUUID();
-        var currentValue = runningAppsData.putIfAbsent(id, new AppData());
+        try {
+            var cmdArray = getExecJarCommand(runAppRequest, appPath);
+            Process appProcess = Runtime.getRuntime().exec(cmdArray);
 
-        // NOTE: Handle *extremely* rare case of a possible UUID collision
-        while (currentValue != null) {
-            id = UUID.randomUUID();
-            currentValue = runningAppsData.putIfAbsent(id, new AppData());
+            long pid = appProcess.pid();
+            String command = String.join(" ", cmdArray);
+
+            // NOTE: Updating AppInfo if its present due to the operating system guarantee of
+            // process Id uniqueness i.e.,
+            // a previous app with this same pid is alread finished.
+            runningApps.put(pid, new AppInfo( runAppRequest.jar(), command));
+
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return new RunAppResponse();
+    }
+
+    public Map<Long, AppInfo> getApps() {
+        return runningApps;
+    }
+
+    public Map<Long, PollAppResponse> pollApps(long[] pids) {
+        Map<Long,PollAppResponse> response = new HashMap<>();
+        for (long id : pids){
+            response.put(id, pollApp(id));
+        }
+        return response;
+    }
+
+    public PollAppResponse pollApp(long pid) {
+
+        if (!runningApps.containsKey(pid)) 
+            return null;
+
+        // TODO: remove
+        // NOTE: switching to see if working
+        if (pid == 1){
+            var val = runningApps.get(pid);
+            runningApps.put(pid, new AppInfo(val.command(), val.appName()));
         }
 
-        Thread.startVirtualThread(() -> {
-            try {
-                Process appProcess = Runtime.getRuntime().exec(getExecJarCommand(runAppRequest, appPath));
+        TopCmdResponse top = profileService.executeTop(pid);
+        HeapCmdResponse heap = profileService.executeHeapCommand(pid);
 
-                while (appProcess.isAlive()) {
+        var info = runningApps.get(pid);
+        if (top == null || heap == null)
+            //TODO: remove
+            //runningApps.remove(pid);
+            //return null;
+            return new PollAppResponse(info.appName(), info.command(), 0, 0, 0);
 
-                    Thread.sleep(1000);
-                }
-            } catch (IOException | InterruptedException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        });
-        return new RunAppResponse();
+        //var info = runningApps.get(pid);
+        return new PollAppResponse(info.appName(), info.command(), top.cpuUsage(), top.ioTime(), heap.heapSize());
     }
 
     private String[] getExecJarCommand(RunAppRequest request, String appPath) {
@@ -73,12 +112,4 @@ public class RunService {
 
 }
 
-class AppData {
-    List<Float> cpuUsage = new ArrayList<>();
-    List<Float> ioTime = new ArrayList<>();
-    boolean isRunning = true;
-    int returnCode = -1;
-
-    public AppData() {
-    }
-}
+record AppInfo(String appName, String command){}

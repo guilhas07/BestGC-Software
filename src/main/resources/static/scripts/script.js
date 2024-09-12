@@ -1,5 +1,6 @@
 const currentPage = window.location.pathname;
 
+let apps = null;
 switch (currentPage) {
     case "/":
         showProfilePage();
@@ -7,7 +8,78 @@ switch (currentPage) {
     case "/run_app":
         showRunAppPage();
         break;
+    case "/apps":
+        loadApps();
+        showAppsPage();
+        break;
     default:
+}
+// NOTE: show body now to prevent jitters in display
+document.body.style.display = "block";
+
+function getCommand(id) {
+    return document.querySelector(`[id^=cmd-${id}]`);
+}
+
+function getName(id) {
+    return document.querySelector(`[id^=name-${id}]`);
+}
+
+function loadApps() {
+    apps = {};
+    for (el of document.querySelectorAll("[id^=details-]")) {
+        let id = /\d+/.exec(el.id)[0];
+        let name = /App: (.*)/.exec(getName(id).innerText)[1];
+
+        let cmd = /Command: (.*)/.exec(getCommand(id).innerText)[1];
+        apps[id] = { name: name, command: cmd };
+    }
+}
+
+function updateAppGraph(id, appInfo) {
+    let app = apps[id];
+    //console.log(app);
+    //console.log(appInfo);
+
+    if (appInfo == null) {
+        // TODO: handle app disappeared
+        return;
+    }
+
+    if (app == null) {
+        apps[id] = appInfo;
+        alert("new");
+        // TODO: Create Graph
+    } else if (app.name != appInfo.name || app.command != appInfo.command) {
+        // TODO: clear graph
+        apps[id] = appInfo;
+        let cmd = getCommand(id);
+        cmd.innerText = `Command: ${appInfo.command}`;
+
+        let name = getName(id);
+        name.innerText = `App: ${appInfo.name}`;
+    }
+    // TODO: Append to graph
+}
+
+function showAppsPage() {
+    setInterval(pollApps, 1000);
+}
+async function pollApps() {
+    let ids = Array.from(
+        document.querySelectorAll("[id^=details-].collapse.show")
+    )
+        .map((el) => /\d+/.exec(el.id)[0])
+        .join(",");
+
+    if (ids.length == 0) return;
+
+    let r = await fetch(`/poll?ids=${ids}`);
+    let j = await r.json();
+    console.log(j);
+    for (let [k, v] of Object.entries(j)) {
+        updateAppGraph(k, v);
+    }
 }
 
 function showRunAppPage() {
@@ -31,9 +103,6 @@ function showRunAppPage() {
 
     handleHeapSizeDisplay();
     handleCustomFileDisplay();
-
-    // NOTE: show body now to prevent jitters in display
-    document.body.style.display = "block";
 }
 
 function showProfilePage() {
@@ -62,13 +131,13 @@ function showProfilePage() {
 
     jar.addEventListener("change", handleCustomFileDisplay);
 
-    tw_input.addEventListener("input", function () {
+    tw_input.addEventListener("input", function() {
         let tw = tw_input.value;
         if (tw > 1 || tw < 0) return;
         pw_input.value = (1 - tw).toFixed(2);
     });
 
-    pw_input.addEventListener("input", function () {
+    pw_input.addEventListener("input", function() {
         let pw = pw_input.value;
         if (pw > 1 || pw < 0) return;
         tw_input.value = (1 - pw).toFixed(2);
@@ -76,13 +145,10 @@ function showProfilePage() {
 
     handleCustomFileDisplay();
     handleAutomaticModeDisplay();
-
-    // NOTE: show body now to prevent jitters in display
-    document.body.style.display = "block";
 }
 
 // handle profile request
-htmx.onLoad(function (target) {
+htmx.onLoad(function(target) {
     console.log(target);
     console.log(cpu_usage);
     console.log(io_time);

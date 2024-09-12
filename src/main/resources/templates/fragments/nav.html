@@ -30,6 +30,14 @@
                     >
                         Run App
                     </a>
+                    <a
+                        class="nav-link"
+                        aria-current="page"
+                        th:href="@{/apps}"
+                        th:classappend="${active == 'Apps'} ? 'active'"
+                    >
+                        Running Applications
+                    </a>
                 </div>
             </div>
         </div>
