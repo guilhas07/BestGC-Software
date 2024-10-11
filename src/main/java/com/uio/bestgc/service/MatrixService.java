@@ -3,8 +3,10 @@ package com.uio.bestgc.service;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
@@ -20,8 +22,13 @@ public class MatrixService {
         ObjectMapper objectMapper = new ObjectMapper();
         try {
             // Parse JSON file into Person record
-            this.matrix = objectMapper.readValue(new File("matrix.json"), Matrix.class);
+            // this.matrix = objectMapper.readValue(new File("matrix.json"), Matrix.class);
+            // this.matrix = objectMapper.readValue(new File("Graal_11_10_0_19.json"),
+            // Matrix.class);
+            var matrixData = objectMapper.readValue(new File("HotSpot_11_10_0_19.json"), FullMatrixData.class);
+            System.out.println("Matrix data: " + matrixData);
 
+            this.matrix = matrixData.matrix();
             // Print the parsed object
             System.out.println(matrix);
         } catch (IOException e) {
@@ -30,18 +37,20 @@ public class MatrixService {
     }
 
     public int[] getHeapSizes() {
-        return matrix.cpu_intensive_matrix().keySet().stream().mapToInt(Integer::valueOf).sorted().toArray();
+        return matrix.keySet().stream().mapToInt(Integer::valueOf).sorted().toArray();
     }
 
     public BestGC getBestGC(boolean cpuIntensive, float cpuAvgPercentage, float maxHeapUsed) {
-        var local_matrix = cpuIntensive ? matrix.cpu_intensive_matrix() : matrix.non_cpu_intensive_matrix();
+        // var local_matrix = cpuIntensive ? matrix.matrix() :
+        // matrix.non_cpu_intensive_matrix();
 
         int min = Integer.MAX_VALUE;
-        for (String key : local_matrix.keySet()) {
+        for (String key : this.matrix.keySet()) {
             var heapSize = Integer.valueOf(key);
             if (heapSize >= maxHeapUsed && heapSize < min)
                 min = heapSize;
         }
+        System.out.println("Selected Heap Size: " + min);
 
         float throughputWeight = 0;
         float pauseTimeWeight = 0;
@@ -56,35 +65,37 @@ public class MatrixService {
             throughputWeight = (float) Math.round(cpuAvgPercentage / 60 * 0.5f * 100) / 100;
 
         pauseTimeWeight = 1 - throughputWeight;
+        System.out.printf("CpuAvgPercentage=%s\tCalculated weights: throughput weight=%s, pause_time weight=%s\n", cpuAvgPercentage, throughputWeight,
+                pauseTimeWeight);
 
-        var gcMetrics = local_matrix.get(String.valueOf(min));
+        var gcMetrics = this.matrix.get(String.valueOf(min));
 
-        String gc = "";
+        String bestgc = "";
         double value = Double.MAX_VALUE;
+        System.out.println("Selecting best gc:");
         for (var entry : gcMetrics.entrySet()) {
             var perfMetric = entry.getValue();
+            var gc = entry.getKey();
             double score = perfMetric.throughput() * throughputWeight + perfMetric.pause_time() * pauseTimeWeight;
-            System.out.println(score);
+            System.out.printf("GC %s score: %s\n", gc, score);
             if (score < value) {
-                gc = entry.getKey();
+                bestgc = entry.getKey();
                 value = score;
             }
 
         }
-        return new BestGC(gc, min);
+        return new BestGC(bestgc, min);
     }
 
     public BestGC getBestGC(boolean cpuIntensive, float maxHeapUsed, double throughputWeight, double pauseTimeWeight) {
-        var local_matrix = cpuIntensive ? matrix.cpu_intensive_matrix() : matrix.non_cpu_intensive_matrix();
-
         int min = Integer.MAX_VALUE;
-        for (String key : local_matrix.keySet()) {
+        for (String key : this.matrix.keySet()) {
             var heapSize = Integer.valueOf(key);
             if (heapSize >= maxHeapUsed && heapSize < min)
                 min = heapSize;
         }
 
-        var gcMetrics = local_matrix.get(String.valueOf(min));
+        var gcMetrics = this.matrix.get(String.valueOf(min));
 
         String gc = "";
         double value = Double.MAX_VALUE;
@@ -105,13 +116,12 @@ public class MatrixService {
 record BestGC(String gc, int heapSize) {
 }
 
-// Define Metrics record
-record Matrix(Map<String, Map<String, PerformanceMetrics>> cpu_intensive_matrix,
-        Map<String, Map<String, PerformanceMetrics>> non_cpu_intensive_matrix,
-        List<String> garbage_collectors) {
+record FullMatrixData(Matrix matrix, List<String> garbage_collectors, Map<String, List<String>> benchmarks) {
 }
 
-// Define PerformanceMetrics record
+class Matrix extends HashMap<String, Map<String, PerformanceMetrics>> {
+};
+
 record PerformanceMetrics(double throughput, double pause_time) {
 }
 
