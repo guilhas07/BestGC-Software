@@ -22,4 +22,7 @@ fi
 echo $profile
 echo "${@:2}"
 # echo mvn clean package $profile -Dmaven.test.skip && echo java --enable-preview -jar ./target/bestGC-0.0.1-SNAPSHOT.jar "${@:2}"
-mvn clean package $profile -Dmaven.test.skip && java --enable-preview -jar ./target/bestGC-0.0.1-SNAPSHOT.jar "${@:2}"
+# mvn clean package $profile -Dmaven.test.skip && java --enable-preview -jar ./target/bestGC-0.0.1-SNAPSHOT.jar "${@:2}"
+mvn -Pconsole spring-boot:run -Dspring-boot.run.arguments="./benchmark_gcs/benchmark_apps/dacapo-23.11-chopin.jar --args=\"spring -n 10 --no-pre-iteration-gc\" --automatic --monitoringTime=50"
+
+
