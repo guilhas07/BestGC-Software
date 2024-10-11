@@ -1,9 +1,11 @@
 package com.uio.bestgc.service;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -60,6 +62,7 @@ public class ProfileService {
         ProfileAppResponse response = null;
 
         final int monitoringTime = profileAppRequest.monitoringTime();
+        System.out.println("Monotoring App with " + monitoringTime);
 
         List<Float> cpuUsages;
         List<Float> ioTimes;
@@ -108,6 +111,10 @@ public class ProfileService {
                 // App failed for every available heap size
                 if (appProcess.exitValue() != 0 && runId == matrixHeapSizes.length - 1) {
                     // TODO: create better exceptions
+                    System.out.println("App failed for every available heap size");
+                    System.out.println("Error: " + new String(appProcess.getErrorStream().readAllBytes()));
+                    System.out.println("Output: " + new String(appProcess.getInputStream().readAllBytes()));
+                    // System.out.println(appProcess.getErrorStream())
                     return null;
                 }
 
@@ -239,7 +246,7 @@ public class ProfileService {
     private String[] getProfileJarCommand(String app, String args, int heapSize) {
         String minHeapSize = "-Xms" + heapSize + "m";
         String maxHeapSize = "-Xmx" + heapSize + "m";
-        System.out.println("java -jar " + maxHeapSize + " " + minHeapSize + app + " " + args);
+        System.out.println("java -jar " + maxHeapSize + " " + minHeapSize + " " + app + " " + args);
 
         return ("java -jar " + maxHeapSize + " " + minHeapSize + " " + app + " " + args).split(" ");
     }
