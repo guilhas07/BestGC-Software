@@ -143,9 +143,9 @@ public class ProfileService {
         boolean isCpuIntensive = totalCpuUsage / cpuUsages.size() >= 60;
         BestGC bestGC = null;
         if (profileAppRequest.automaticMode()) {
-            bestGC = matrixService.getBestGC(isCpuIntensive, avgCpuUsage, maxHeapUsage);
+            bestGC = matrixService.getBestGC( avgCpuUsage, maxHeapUsage);
         } else {
-            bestGC = matrixService.getBestGC(isCpuIntensive, maxHeapUsage,
+            bestGC = matrixService.getBestGC( maxHeapUsage,
                     profileAppRequest.throughputWeight(), profileAppRequest.pauseTimeWeight());
         }
 

@@ -18,8 +18,8 @@ public class MatrixService {
     public MatrixService() {
         ObjectMapper objectMapper = new ObjectMapper();
         try {
-            var name = "HotSpot_11_10_0_19.json";
-            // var name ="Graal_11_10_0_19.json";
+            // var name = "HotSpot_11_10_0_19.json";
+            var name ="Graal_11_10_0_19.json";
             System.out.println("Loading matrix file: " + name);
             var matrixData = objectMapper.readValue(new File(name), FullMatrixData.class);
 
@@ -34,15 +34,7 @@ public class MatrixService {
         return matrix.keySet().stream().mapToInt(Integer::valueOf).sorted().toArray();
     }
 
-    public BestGC getBestGC(boolean cpuIntensive, float cpuAvgPercentage, float maxHeapUsed) {
-
-        int min = Integer.MAX_VALUE;
-        for (String key : this.matrix.keySet()) {
-            var heapSize = Integer.valueOf(key);
-            if (heapSize >= maxHeapUsed && heapSize < min)
-                min = heapSize;
-        }
-        System.out.println("Selected Heap Size: " + min);
+    public BestGC getBestGC(float cpuAvgPercentage, float maxHeapUsed) {
 
         float throughputWeight = 0;
         float pauseTimeWeight = 0;
@@ -54,12 +46,25 @@ public class MatrixService {
         else if (cpuAvgPercentage > 90)
             throughputWeight = 1;
         else
-            throughputWeight = (float) Math.round(cpuAvgPercentage / 60 * 0.5f * 100) / 100;
+            throughputWeight = (float) Math.round((cpuAvgPercentage / 60 - 0.5f) * 100) / 100;
 
-        pauseTimeWeight = 1 - throughputWeight;
+        pauseTimeWeight = (float) Math.round((1 - throughputWeight) * 100)/ 100;
         System.out.printf("CpuAvgPercentage=%s\tCalculated weights: throughput weight=%s, pause_time weight=%s\n",
                 cpuAvgPercentage, throughputWeight,
                 pauseTimeWeight);
+
+        return getBestGC(maxHeapUsed, throughputWeight, pauseTimeWeight);
+    }
+
+    public BestGC getBestGC(float maxHeapUsed, double throughputWeight, double pauseTimeWeight) {
+        int min = Integer.MAX_VALUE;
+        for (String key : this.matrix.keySet()) {
+            var heapSize = Integer.valueOf(key);
+            if (heapSize >= maxHeapUsed && heapSize < min)
+                min = heapSize;
+        }
+        System.out.printf("Weights: throughput weight=%s, pause_time weight=%s\n", throughputWeight, pauseTimeWeight);
+        System.out.println("Selected Heap Size: " + min);
 
         var gcMetrics = this.matrix.get(String.valueOf(min));
 
@@ -78,31 +83,6 @@ public class MatrixService {
 
         }
         return new BestGC(bestgc, min);
-    }
-
-    public BestGC getBestGC(boolean cpuIntensive, float maxHeapUsed, double throughputWeight, double pauseTimeWeight) {
-        int min = Integer.MAX_VALUE;
-        for (String key : this.matrix.keySet()) {
-            var heapSize = Integer.valueOf(key);
-            if (heapSize >= maxHeapUsed && heapSize < min)
-                min = heapSize;
-        }
-
-        var gcMetrics = this.matrix.get(String.valueOf(min));
-
-        String gc = "";
-        double value = Double.MAX_VALUE;
-        for (var entry : gcMetrics.entrySet()) {
-            var perfMetric = entry.getValue();
-            double score = perfMetric.throughput() * throughputWeight + perfMetric.pause_time() * pauseTimeWeight;
-            System.out.println(score);
-            if (score < value) {
-                gc = entry.getKey();
-                value = score;
-            }
-
-        }
-        return new BestGC(gc, min);
     }
 }
 
