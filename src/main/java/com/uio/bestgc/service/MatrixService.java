@@ -1,12 +1,10 @@
 package com.uio.bestgc.service;
 
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
@@ -18,19 +16,15 @@ public class MatrixService {
     Matrix matrix;
 
     public MatrixService() {
-        // Gson gson = new Gson();
         ObjectMapper objectMapper = new ObjectMapper();
         try {
-            // Parse JSON file into Person record
-            // this.matrix = objectMapper.readValue(new File("matrix.json"), Matrix.class);
-            // this.matrix = objectMapper.readValue(new File("Graal_11_10_0_19.json"),
-            // Matrix.class);
-            var matrixData = objectMapper.readValue(new File("HotSpot_11_10_0_19.json"), FullMatrixData.class);
-            System.out.println("Matrix data: " + matrixData);
+            var name = "HotSpot_11_10_0_19.json";
+            // var name ="Graal_11_10_0_19.json";
+            System.out.println("Loading matrix file: " + name);
+            var matrixData = objectMapper.readValue(new File(name), FullMatrixData.class);
 
             this.matrix = matrixData.matrix();
-            // Print the parsed object
-            System.out.println(matrix);
+            System.out.println("Matrix: " + matrix);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -41,8 +35,6 @@ public class MatrixService {
     }
 
     public BestGC getBestGC(boolean cpuIntensive, float cpuAvgPercentage, float maxHeapUsed) {
-        // var local_matrix = cpuIntensive ? matrix.matrix() :
-        // matrix.non_cpu_intensive_matrix();
 
         int min = Integer.MAX_VALUE;
         for (String key : this.matrix.keySet()) {
@@ -65,7 +57,8 @@ public class MatrixService {
             throughputWeight = (float) Math.round(cpuAvgPercentage / 60 * 0.5f * 100) / 100;
 
         pauseTimeWeight = 1 - throughputWeight;
-        System.out.printf("CpuAvgPercentage=%s\tCalculated weights: throughput weight=%s, pause_time weight=%s\n", cpuAvgPercentage, throughputWeight,
+        System.out.printf("CpuAvgPercentage=%s\tCalculated weights: throughput weight=%s, pause_time weight=%s\n",
+                cpuAvgPercentage, throughputWeight,
                 pauseTimeWeight);
 
         var gcMetrics = this.matrix.get(String.valueOf(min));
