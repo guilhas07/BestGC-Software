@@ -53,8 +53,11 @@ public class BestGcApplication {
             float throughputWeight = -1;
             float pauseTimeWeight = -1;
             String jarArgs = "";
+            boolean automaticMode = false;
+            boolean runApp = true;
 
             for (int i = 1; i < args.length; i++) {
+                System.out.println("Parsing: '" + args[i] + "'");
                 switch (args[i]) {
                     // case String str when str.contains("--wt"):
                     case String s when s.contains("--wt=") -> {
@@ -66,11 +69,21 @@ public class BestGcApplication {
                         throughputWeight = 1 - pauseTimeWeight;
                     }
                     case String s when s.contains("--monitoringTime=") ->
-                        monitoringTime = Integer.valueOf(s.substring("monitoringTime".length()));
+                        monitoringTime = Integer.valueOf(s.substring("--monitoringTime=".length()));
                     case String s when s.contains("--args=") ->
                         jarArgs = s.substring("--args=".length());
+                    case String s when s.contains("--automatic") ->
+                         automaticMode = true;
+                    case String s when s.contains("--no-run") ->
+                         runApp = false;
                     default -> System.out.println("Option " + args[i] + " not recognized");
                 }
+            }
+
+            if (automaticMode){
+                System.out.println("Running BestGC with automaticMode. Weights will be ignored.");
+                throughputWeight = 1;
+                pauseTimeWeight = 0;
             }
 
             if (pauseTimeWeight < 0 || throughputWeight < 0 || throughputWeight + pauseTimeWeight != 1) {
@@ -78,9 +91,8 @@ public class BestGcApplication {
                 return;
             }
 
-            // TODO: override automatic mode
             var response = profileService.profileApp(
-                    new ProfileAppRequest(false, false, throughputWeight, pauseTimeWeight, monitoringTime, pathToJar,
+                    new ProfileAppRequest(automaticMode, runApp, throughputWeight, pauseTimeWeight, monitoringTime, pathToJar,
                             jarArgs,
                             null),
                     pathToJar);
