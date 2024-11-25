@@ -10,7 +10,7 @@
         <relativePath />
         <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.uio</groupId>
+    <groupId>pt.tecnico.ulisboa.web.ist196392</groupId>
     <artifactId>bestGC</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>bestGC</name>
@@ -98,7 +98,7 @@
                         <configuration>
                             <classifier>spring-boot</classifier>
                             <mainClass>
-                                com.uio.bestgc.BestGcApplication
+                                pt.tecnico.ulisboa.web.ist196392.bestgc.BestGcApplication
                             </mainClass>
                         </configuration>
                     </execution>

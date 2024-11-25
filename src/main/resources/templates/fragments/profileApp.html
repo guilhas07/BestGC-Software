@@ -12,11 +12,13 @@
                     <p
                         th:text="*{'Max HeapSize used: ' +  maxHeapSize + 'MB'}"
                     />
-                    <p th:if="*{cpuIntensive}">Application is CPU intensive</p>
+                    <p
+                        th:text="*{'Application is' + (cpuIntensive ? ' ' : ' not ') + 'CPU intensive'}"
+                    ></p>
                     <p />
-                    <p th:unless="*{cpuIntensive}">
-                        Application is not CPU intensive
-                    </p>
+                    <!-- <p th:unless="*{cpuIntensive}"> -->
+                    <!--     Application is not CPU intensive -->
+                    <!-- </p> -->
                     <p th:text="*{'Average CPU Usage: ' + avgCpuUsage }" />
                     <p
                         th:text="*{'Average CPU Time Percentage: ' + avgCpuTime }"
@@ -45,24 +47,24 @@
                                 th:name="${gcOption}"
                                 th:value="${gcOption}"
                                 th:text="${gcOption}"
-                                th:selected="${gcOption} eq ${gc}"
+                                th:selected="${gcOption} eq *{gc}"
                             />
                         </select>
                         <br />
                         <br />
-                        <label>GC Args:</label>
-                        <input type="text" th:field="*{gcArgs}" />
-                        <br />
-                        <br />
+                        <!-- <label>GC Args:</label> -->
+                        <!-- <input type="text" th:field="*{gcArgs}" /> -->
+                        <!-- <br /> -->
+                        <!-- <br /> -->
                         <label>HeapSize:</label>
                         <input type="number" th:field="*{heapSize}" required />
                         <br />
                         <br />
 
-                        <label>Custom Heap GC Policy:</label>
-                        <input type="text" th:field="*{customHeapGCPolicy}" />
-                        <br />
-                        <br />
+                        <!-- <label>Custom Heap GC Policy:</label> -->
+                        <!-- <input type="text" th:field="*{customHeapGCPolicy}" /> -->
+                        <!-- <br /> -->
+                        <!-- <br /> -->
 
                         <label>Jar:</label>
                         <!--/* 
@@ -75,7 +77,7 @@
                                 th:name="${jarOption}"
                                 th:text="${jarOption}"
                                 th:value="${jarOption}"
-                                th:selected="${jarOption} eq ${jar}"
+                                th:selected="${jarOption} eq *{jar}"
                             />
                         </select>
                         <br />
@@ -86,10 +88,10 @@
                         <br />
                         <br />
 
-                        <label>Enable Log:</label>
-                        <input type="checkbox" th:field="*{enableLog}" />
-                        <br />
-                        <br />
+                        <!-- <label>Enable Log:</label> -->
+                        <!-- <input type="checkbox" th:field="*{enableLog}" /> -->
+                        <!-- <br /> -->
+                        <!-- <br /> -->
                         <input type="submit" value="Submit" />
                     </form>
                 </div>
