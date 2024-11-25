@@ -36,10 +36,10 @@ function loadApps() {
     }
 }
 
-function updateAppGraph(id, appInfo) {
+function updateAppInfo(id, appInfo) {
     let app = apps[id];
-    //console.log(app);
-    //console.log(appInfo);
+    console.log(app);
+    console.log(appInfo);
 
     if (appInfo == null) {
         // TODO: handle app disappeared
@@ -64,6 +64,11 @@ function updateAppGraph(id, appInfo) {
 
 function showAppsPage() {
     setInterval(pollApps, 1000);
+    setInterval(getApps, 10_000);
+}
+
+async function getApps() {
+
 }
 
 async function pollApps() {
@@ -77,9 +82,9 @@ async function pollApps() {
 
     let r = await fetch(`/poll?ids=${ids}`);
     let j = await r.json();
-    console.log(j);
+    console.log("Received: ", j);
     for (let [k, v] of Object.entries(j)) {
-        updateAppGraph(k, v);
+        updateAppInfo(k, v);
     }
 }
 

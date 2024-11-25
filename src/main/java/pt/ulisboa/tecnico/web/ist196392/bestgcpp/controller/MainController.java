@@ -67,17 +67,23 @@ public class MainController {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
+
+            // Create new profile request with the jar file name resolved
+            profileRequest = new ProfileAppRequest(profileRequest.automaticMode(), profileRequest.runApp(),
+                    profileRequest.throughputWeight(), profileRequest.pauseTimeWeight(),
+                    profileRequest.monitoringTime(), file.getOriginalFilename(), profileRequest.args(), null);
         }
 
+        var updateProfileRequest = profileRequest;
         var optProfileResponse = profileService.profileApp(profileRequest, dest.toString());
         var wrapper = new Object() {
             boolean redirect = false;
         };
         optProfileResponse.ifPresentOrElse(
                 profileResponse -> {
-                    var runAppRequest = new RunAppRequest(profileRequest.jar(), profileResponse.bestGC(),
-                            profileRequest.args(), profileResponse.heapSize(), null);
-                    if (profileRequest.runApp()) {
+                    var runAppRequest = new RunAppRequest(updateProfileRequest.jar(), profileResponse.bestGC(),
+                            updateProfileRequest.args(), profileResponse.heapSize(), null);
+                    if (updateProfileRequest.runApp()) {
                         runService.runApp(runAppRequest);
                         wrapper.redirect = true;
                         return;
@@ -93,9 +99,9 @@ public class MainController {
 
         if (wrapper.redirect) {
             // NOTE: to successfully redirect htmx form request inject a header
-            // and use a dummy template
+            // and use a empty template
             response.setHeader("HX-Redirect", "/apps");
-            return "dummy";
+            return "empty";
         }
         return "fragments/profileApp";
     }

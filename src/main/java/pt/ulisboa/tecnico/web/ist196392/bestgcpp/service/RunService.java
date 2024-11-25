@@ -1,14 +1,10 @@
 package pt.ulisboa.tecnico.web.ist196392.bestgcpp.service;
 
 import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,8 +12,8 @@ import org.springframework.stereotype.Service;
 import pt.ulisboa.tecnico.web.ist196392.bestgcpp.model.PollAppResponse;
 import pt.ulisboa.tecnico.web.ist196392.bestgcpp.model.RunAppRequest;
 import pt.ulisboa.tecnico.web.ist196392.bestgcpp.model.RunAppResponse;
+import pt.ulisboa.tecnico.web.ist196392.bestgcpp.model.AppInfo;
 
-@Service
 public class RunService {
 
     Map<Long, AppInfo> runningApps = new HashMap<>();
@@ -41,9 +37,8 @@ public class RunService {
             String command = String.join(" ", cmdArray);
 
             // NOTE: Updating AppInfo if its present due to the operating system guarantee
-            // of
-            // process Id uniqueness i.e.,
-            // a previous app with this same pid is alread finished.
+            // of process Id uniqueness i.e., a previous app with this same pid is already
+            // finished.
             runningApps.put(pid, new AppInfo(runAppRequest.jar(), command));
 
         } catch (IOException e) {
@@ -55,6 +50,11 @@ public class RunService {
 
     public Map<Long, AppInfo> getApps() {
         return runningApps;
+    }
+
+    public Map<Long, AppInfo> getApps(Set<Long> filterIds) {
+        return runningApps.entrySet().stream().filter((entry) -> filterIds.contains(entry.getKey()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     public Map<Long, PollAppResponse> pollApps(long[] pids) {
@@ -70,24 +70,26 @@ public class RunService {
         if (!runningApps.containsKey(pid))
             return null;
 
-        // TODO: remove
-        // NOTE: switching to see if working
-        if (pid == 1) {
-            var val = runningApps.get(pid);
-            runningApps.put(pid, new AppInfo(val.command(), val.appName()));
+        // NOTE: for debugging purposes use reserved pids to test
+        if (pid == 1 || pid == 0) {
+            if (pid == 1) {
+                var val = runningApps.get(pid);
+                runningApps.put(pid, new AppInfo(val.command(), val.appName()));
+            }
+            var info = runningApps.get(pid);
+            return new PollAppResponse(info.appName(), info.command(), 0, 0, 0);
         }
 
+        var info = runningApps.get(pid);
         TopCmdResponse top = profileService.executeTop(pid);
         HeapCmdResponse heap = profileService.executeHeapCommand(pid);
 
-        var info = runningApps.get(pid);
-        if (top == null || heap == null)
-            // TODO: remove
-            // runningApps.remove(pid);
-            // return null;
-            return new PollAppResponse(info.appName(), info.command(), 0, 0, 0);
+        if (top == null || heap == null) {
+            System.out.printf("App %s is not alive. Removing it.", info.appName());
+            runningApps.remove(pid);
+            return null;
+        }
 
-        // var info = runningApps.get(pid);
         return new PollAppResponse(info.appName(), info.command(), top.cpuUsage(), top.ioTime(), heap.heapSize());
     }
 
@@ -112,7 +114,4 @@ public class RunService {
         return command.split(" ");
     }
 
-}
-
-record AppInfo(String appName, String command) {
 }
